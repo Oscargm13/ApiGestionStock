@@ -39,6 +39,5 @@ namespace ApiGestionStock.Models
 
         [Column("Genero")]
         public string Genero { get; set; }
-
     }
 }
