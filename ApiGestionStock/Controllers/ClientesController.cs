@@ -9,8 +9,8 @@ namespace ApiGestionStock.Controllers
     [ApiController]
     public class ClientesController : ControllerBase
     {
-        private RepositoryClientes repo;
-        public ClientesController(RepositoryClientes repo)
+        private RepositoryAlmacen repo;
+        public ClientesController(RepositoryAlmacen repo)
         {
             this.repo = repo;
         }

@@ -14,7 +14,6 @@ namespace ApiGestionStock.Repositories
         }
         public async Task<List<Cliente>> GetClientesAsync()
         {
-            
             return await this.context.Clientes.ToListAsync();
         }
 

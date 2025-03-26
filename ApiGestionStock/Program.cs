@@ -6,7 +6,7 @@ var builder = WebApplication.CreateBuilder(args);
 
 // Add services to the container.
 string connectionString = builder.Configuration.GetConnectionString("SqlAzure");
-builder.Services.AddTransient<RepositoryClientes>();
+builder.Services.AddTransient<RepositoryAlmacen>();
 builder.Services.AddDbContext<AlmacenesContext>(options => options.UseSqlServer(connectionString));
 builder.Services.AddControllers();
 // Learn more about configuring OpenAPI at https://aka.ms/aspnet/openapi
