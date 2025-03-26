@@ -8,17 +8,17 @@ namespace ApiGestionStock.Interfaces
         //Clientes
         #region
         Task<List<Cliente>> GetClientesAsync();
-        Task<List<Proveedor>> GetProveedores();
+        Task<List<Proveedor>> GetProveedoresAsync();
         Task<Cliente> FindClienteAsync(int id);
         Task CreateClienteAsync(int idCliente, string nombre, string apellido, string email, string direccion,
             string telefono, DateTime fechaNacimiento, string genero);
         Task UpdateClienteAsync(int idCliente, string nombre, string apellido, string email, string direccion,
             string telefono, DateTime fechaNacimiento, string genero);
         Task DeleteClienteAsync(int id);
-        Task<Proveedor> FindProveedor(int id);
-        Task CreateProveedor(Proveedor proveedor);
-        Task UpdateProveedor(Proveedor proveedor);
-        Task DeleteProveedor(int id);
+        Task<Proveedor> FindProveedorAsync(int id);
+        Task CreateProveedorAsync(string nombreEmpresa, string telefono, string email, string nombreContacto, string direccion);
+        Task UpdateProveedorAsync(int idProveedor, string nombreEmpresa, string telefono, string email, string nombreContacto, string direccion);
+        Task DeleteProveedorAsync(int id);
         #endregion
         //Productos
         #region

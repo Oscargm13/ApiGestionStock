@@ -149,29 +149,45 @@ namespace ApiGestionStock.Repositories
             await this.context.SaveChangesAsync();
         }
 
-        public Task<List<Proveedor>> GetProveedores()
+        public async Task<List<Proveedor>> GetProveedoresAsync()
         {
-            throw new NotImplementedException();
+            return await this.context.Proveedores.ToListAsync();
         }
 
-        public Task<Proveedor> FindProveedor(int id)
+        public async Task<Proveedor> FindProveedorAsync(int id)
         {
-            throw new NotImplementedException();
+            return await this.context.Proveedores.FirstOrDefaultAsync(x => x.IdProveedor == id);
         }
 
-        public Task CreateProveedor(Proveedor proveedor)
+        public async Task CreateProveedorAsync(string nombreEmpresa, string telefono, string email, string nombreContacto, string direccion)
         {
-            throw new NotImplementedException();
+            Proveedor proveedor = new Proveedor();
+            proveedor.NombreEmpresa = nombreEmpresa;
+            proveedor.Telefono = telefono;
+            proveedor.Email = email;
+            proveedor.NombreContacto = nombreContacto;
+            proveedor.Direccion = direccion;
+            await this.context.Proveedores.AddAsync(proveedor);
+            await this.context.SaveChangesAsync();
         }
 
-        public Task UpdateProveedor(Proveedor proveedor)
+        public async Task UpdateProveedorAsync(int idProveedor, string nombreEmpresa, string telefono, string email, string nombreContacto, string direccion)
         {
-            throw new NotImplementedException();
+            Proveedor proveedor = await this.FindProveedorAsync(idProveedor);
+            proveedor.NombreEmpresa = nombreEmpresa;
+            proveedor.Telefono = telefono;
+            proveedor.Email = email;
+            proveedor.NombreContacto = nombreContacto;
+            proveedor.Direccion = direccion;
+            this.context.Proveedores.Update(proveedor);
+            await this.context.SaveChangesAsync();
         }
 
-        public Task DeleteProveedor(int id)
+        public async Task DeleteProveedorAsync(int id)
         {
-            throw new NotImplementedException();
+            Proveedor proveedor = await this.FindProveedorAsync(id);
+            this.context.Proveedores.Remove(proveedor);
+            await this.context.SaveChangesAsync();
         }
         #endregion
 

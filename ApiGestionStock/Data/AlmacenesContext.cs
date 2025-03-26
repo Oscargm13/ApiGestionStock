@@ -7,5 +7,6 @@ namespace ApiGestionStock.Data
     {
         public AlmacenesContext(DbContextOptions<AlmacenesContext> options): base(options) { }
         public DbSet<Cliente> Clientes { get; set; }
+        public DbSet<Proveedor> Proveedores { get; set; }
     }
 }
