@@ -5,42 +5,42 @@ namespace ApiGestionStock.Interfaces
 {
     public interface IRepositoryAlmacen
     {
-        //Clientes
+        // Productos
+        #region
+        Task<List<Producto>> GetProductosAsync();
+        Task<Producto> FindProductoAsync(int id);
+        Task<List<Producto>> GetProductosProveedorAsync(int proveedorId);
+        Task<List<VistaProductoTienda>> GetAllVistaProductosTiendaAsync();
+        Task<List<VistaProductoTienda>> GetVistaProductosTiendaAsync(int idTienda);
+        Task<List<VistaProductoTienda>> GetVistaProductosTiendaConStockBajoAsync();
+        Task<List<ProductosTienda>> GetProductosTiendaGerenteAsync(int idGerente);
+        Task<List<VistaProductosGerente>> GetProductosGerenteAsync(int idUsuarioGerente);
+        Task<int> GetTotalStockGerenteAsync(int idUsuarioGerente);
+        Task<VistaProductoTienda> FindProductoTiendaAsync(int idProducto, int idTienda);
+        Task CrearProductoAsync(string nombre, decimal precio, decimal coste, string nombreCategoria, int? idCategoriaPadre, string imagen);
+        Task UpdateProductoAsync(int idProducto, string nombreProducto, decimal precio, decimal coste, int idCategoria, string imagen);
+        Task DeleteProductoAsync(int idProducto);
+        Task<List<Categoria>> GetCategoriasAsync();
+        Task<Producto> GetProductoPorIdAsync(int productoId);
+        #endregion
+
+        // Clientes y Proveedores
         #region
         Task<List<Cliente>> GetClientesAsync();
-        Task<List<Proveedor>> GetProveedoresAsync();
         Task<Cliente> FindClienteAsync(int id);
         Task CreateClienteAsync(int idCliente, string nombre, string apellido, string email, string direccion,
             string telefono, DateTime fechaNacimiento, string genero);
         Task UpdateClienteAsync(int idCliente, string nombre, string apellido, string email, string direccion,
             string telefono, DateTime fechaNacimiento, string genero);
         Task DeleteClienteAsync(int id);
+        Task<List<Proveedor>> GetProveedoresAsync();
         Task<Proveedor> FindProveedorAsync(int id);
         Task CreateProveedorAsync(string nombreEmpresa, string telefono, string email, string nombreContacto, string direccion);
         Task UpdateProveedorAsync(int idProveedor, string nombreEmpresa, string telefono, string email, string nombreContacto, string direccion);
         Task DeleteProveedorAsync(int id);
         #endregion
-        //Productos
-        #region
-        List<Producto> GetProductos();
-        Task<List<Producto>> GetProductosProveedor(int proveedorId);
-        List<VistaProductoTienda> GetAllVistaProductosTienda();
-        List<VistaProductoTienda> GetVistaProductosTienda(int idTienda);
-        Task<List<VistaProductoTienda>> GetVistaProductosTiendaConStockBajo();
-        List<ProductosTienda> GetProductosTiendaGerente(int idGerente);
-        List<VistaProductosGerente> GetProductosGerente(int idUsuarioGerente);
-        int GetTotalStockGerente(int idUsuarioGerente);
-        VistaProductoTienda FindProductoTienda(int idProducto, int idTienda);
-        Task<Producto> FindProductoAsync(int idProducto);
-        List<VistaProductosGerente> FindProductoManager(int idProducto, int idUsuarioGerente);
-        List<Producto> findProductosCategoria(int idCategoria);
-        void CrearProducto(string nombreProducto, decimal precio, decimal coste, string nombreCategoria, int? idCategoriaPadre, string imagen);
-        Task UpdateProductoAsync(int idProducto, string nombreProducto, decimal precio, decimal coste, int idCategoria, string imagen);
-        Task EliminarProducto(int idProducto);
-        Task<List<Categoria>> GetCategoriasAsync();
-        Producto GetProductoPorId(int productoId);
-        #endregion
-        //Inventario
+
+        // Inventario
         #region
         Task<List<VistaInventarioDetalladoVenta>> GetMovimientos();
         Task<List<Notificacion>> GetNotificaciones();
@@ -54,7 +54,8 @@ namespace ApiGestionStock.Interfaces
         Task<List<Venta>> GetVentas();
         Task<List<Compra>> GetCompras();
         #endregion
-        //Usuario
+
+        // Usuario
         #region
         Task<List<Usuario>> GetUsuariosAsync();
         Task<List<Rol>> GetRoles();
@@ -62,7 +63,8 @@ namespace ApiGestionStock.Interfaces
         Task<Usuario> CompararUsuario(string nombreUsuario, string password);
         Task<Usuario> findUsuario(int idUsuario);
         #endregion
-        //Tiendas
+
+        // Tiendas
         #region
         List<Tienda> GetTiendas();
         Tienda FindTienda(int idTienda);

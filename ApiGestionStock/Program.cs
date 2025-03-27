@@ -1,4 +1,5 @@
 using ApiGestionStock.Data;
+using ApiGestionStock.Interfaces;
 using ApiGestionStock.Repositories;
 using Microsoft.EntityFrameworkCore;
 
@@ -6,7 +7,7 @@ var builder = WebApplication.CreateBuilder(args);
 
 // Add services to the container.
 string connectionString = builder.Configuration.GetConnectionString("SqlAzure");
-builder.Services.AddTransient<RepositoryAlmacen>();
+builder.Services.AddTransient<IRepositoryAlmacen, RepositoryAlmacen>();
 builder.Services.AddDbContext<AlmacenesContext>(options => options.UseSqlServer(connectionString));
 builder.Services.AddControllers();
 // Learn more about configuring OpenAPI at https://aka.ms/aspnet/openapi

@@ -14,89 +14,156 @@ namespace ApiGestionStock.Repositories
             this.context = context;
         }
         #region Productos
-        public List<Producto> GetProductos()
+        public async Task<List<Producto>> GetProductosAsync()
         {
-            throw new NotImplementedException();
+            return await this.context.Productos.ToListAsync();
         }
 
-        public Task<List<Producto>> GetProductosProveedor(int proveedorId)
+        public async Task<Producto> FindProductoAsync(int id)
         {
-            throw new NotImplementedException();
+            return await this.context.Productos.FirstOrDefaultAsync(p => p.IdProducto == id);
         }
 
-        public List<VistaProductoTienda> GetAllVistaProductosTienda()
+        public async Task<List<Producto>> GetProductosProveedorAsync(int proveedorId)
         {
-            throw new NotImplementedException();
+            return await this.context.ProductosProveedores
+                .Where(pp => pp.IdProveedor == proveedorId)
+                .Join(this.context.Productos,
+                    pp => pp.IdProducto,
+                    p => p.IdProducto,
+                    (pp, p) => p)
+                .ToListAsync();
         }
 
-        public List<VistaProductoTienda> GetVistaProductosTienda(int idTienda)
+        public async Task<List<VistaProductoTienda>> GetAllVistaProductosTiendaAsync()
         {
-            throw new NotImplementedException();
+            return await this.context.VistaProductosTienda.ToListAsync();
         }
 
-        public Task<List<VistaProductoTienda>> GetVistaProductosTiendaConStockBajo()
+        public async Task<List<VistaProductoTienda>> GetVistaProductosTiendaAsync(int idTienda)
         {
-            throw new NotImplementedException();
+            return await this.context.VistaProductosTienda
+                .Where(vpt => vpt.IdTienda == idTienda)
+                .ToListAsync();
         }
 
-        public List<ProductosTienda> GetProductosTiendaGerente(int idGerente)
+        public async Task<List<VistaProductoTienda>> GetVistaProductosTiendaConStockBajoAsync()
         {
-            throw new NotImplementedException();
+            return await this.context.VistaProductosTienda
+                .Where(vp => vp.StockTienda < 15)
+                .ToListAsync();
         }
 
-        public List<VistaProductosGerente> GetProductosGerente(int idUsuarioGerente)
+        public async Task<List<ProductosTienda>> GetProductosTiendaGerenteAsync(int idGerente)
         {
-            throw new NotImplementedException();
+            return await this.context.ProductosTienda
+                .Join(this.context.Tiendas, pt => pt.IdTienda, t => t.IdTienda, (pt, t) => new { pt, t })
+                .Join(this.context.ManagerTiendas, pt_t => pt_t.t.IdTienda, mt => mt.IdTienda, (pt_t, mt) => new { pt_t.pt, mt })
+                .Where(x => x.mt.IdUsuario == idGerente)
+                .Select(x => x.pt)
+                .ToListAsync();
         }
 
-        public int GetTotalStockGerente(int idUsuarioGerente)
+        public async Task<List<VistaProductosGerente>> GetProductosGerenteAsync(int idUsuarioGerente)
         {
-            throw new NotImplementedException();
+            return await this.context.VistaProductosGerente
+                .Join(this.context.ManagerTiendas,
+                    vpg => vpg.IdTienda,
+                    mt => mt.IdTienda,
+                    (vpg, mt) => new { vpg, mt })
+                .Where(x => x.mt.IdUsuario == idUsuarioGerente)
+                .Select(x => x.vpg)
+                .ToListAsync();
         }
 
-        public VistaProductoTienda FindProductoTienda(int idProducto, int idTienda)
+        public async Task<int> GetTotalStockGerenteAsync(int idUsuarioGerente)
         {
-            throw new NotImplementedException();
+            return await this.context.VistaProductosGerente
+                .Join(this.context.ManagerTiendas,
+                    vpg => vpg.IdTienda,
+                    mt => mt.IdTienda,
+                    (vpg, mt) => new { vpg, mt })
+                .Where(x => x.mt.IdUsuario == idUsuarioGerente)
+                .SumAsync(x => x.vpg.StockTienda);
         }
 
-        public Task<Producto> FindProductoAsync(int idProducto)
+        public async Task<VistaProductoTienda> FindProductoTiendaAsync(int idProducto, int idTienda)
         {
-            throw new NotImplementedException();
+            return await this.context.VistaProductosTienda
+                .FirstOrDefaultAsync(vpt => vpt.IdProducto == idProducto && vpt.IdTienda == idTienda);
         }
 
-        public List<VistaProductosGerente> FindProductoManager(int idProducto, int idUsuarioGerente)
+        public async Task CrearProductoAsync(string nombre, decimal precio, decimal coste, string nombreCategoria, int? idCategoriaPadre, string imagen)
         {
-            throw new NotImplementedException();
+            // 1. Crear o encontrar la categoría
+            Categoria categoria = await this.context.Categorias.FirstOrDefaultAsync(c => c.Nombre == nombreCategoria);
+
+            if (categoria == null)
+            {
+                categoria = new Categoria
+                {
+                    Nombre = nombreCategoria,
+                    IdCategoriaPadre = idCategoriaPadre
+                };
+
+                this.context.Categorias.Add(categoria);
+                await this.context.SaveChangesAsync(); // Se asegura que el IdCategoria se genera
+            }
+
+            // 2. Crear el producto
+            Producto nuevoProducto = new Producto
+            {
+                Nombre = nombre,
+                Precio = precio,
+                Coste = coste,
+                IdCategoria = categoria.IdCategoria,
+                Imagen = imagen
+            };
+
+            this.context.Productos.Add(nuevoProducto);
+            await this.context.SaveChangesAsync();
         }
 
-        public List<Producto> findProductosCategoria(int idCategoria)
+        public async Task UpdateProductoAsync(int idProducto, string nombreProducto, decimal precio, decimal coste, int idCategoria, string imagen)
         {
-            throw new NotImplementedException();
+            Producto productoExistente = await this.context.Productos.FindAsync(idProducto);
+
+            if (productoExistente != null)
+            {
+                productoExistente.Nombre = nombreProducto;
+                productoExistente.Precio = precio;
+                productoExistente.Coste = coste;
+                productoExistente.IdCategoria = idCategoria;
+                productoExistente.Imagen = imagen;
+
+                this.context.Productos.Update(productoExistente);
+                await this.context.SaveChangesAsync();
+            }
+            else
+            {
+                throw new Exception($"No se encontró el producto con ID {idProducto}");
+            }
         }
 
-        public void CrearProducto(string nombreProducto, decimal precio, decimal coste, string nombreCategoria, int? idCategoriaPadre, string imagen)
+        public async Task DeleteProductoAsync(int idProducto)
         {
-            throw new NotImplementedException();
+            Producto productoAEliminar = await this.context.Productos.FindAsync(idProducto);
+
+            if (productoAEliminar != null)
+            {
+                this.context.Productos.Remove(productoAEliminar);
+                await this.context.SaveChangesAsync();
+            }
         }
 
-        public Task UpdateProductoAsync(int idProducto, string nombreProducto, decimal precio, decimal coste, int idCategoria, string imagen)
+        public async Task<List<Categoria>> GetCategoriasAsync()
         {
-            throw new NotImplementedException();
+            return await this.context.Categorias.ToListAsync();
         }
 
-        public Task EliminarProducto(int idProducto)
+        public async Task<Producto> GetProductoPorIdAsync(int productoId)
         {
-            throw new NotImplementedException();
-        }
-
-        public Task<List<Categoria>> GetCategoriasAsync()
-        {
-            throw new NotImplementedException();
-        }
-
-        public Producto GetProductoPorId(int productoId)
-        {
-            throw new NotImplementedException();
+            return await this.context.Productos.FirstOrDefaultAsync(p => p.IdProducto == productoId);
         }
         #endregion
 
