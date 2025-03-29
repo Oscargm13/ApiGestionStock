@@ -15,11 +15,13 @@ namespace ApiGestionStock.Controllers
     {
         private readonly IRepositoryAlmacen repo;
         private AlmacenesContext context;
+        private readonly ILogger<RepositoryAlmacen> logger;
 
-        public InventarioController(IRepositoryAlmacen repo, AlmacenesContext context)
+        public InventarioController(IRepositoryAlmacen repo, AlmacenesContext context, ILogger<RepositoryAlmacen> logger)
         {
             this.repo = repo;
             this.context = context;
+            this.logger = logger;
         }
 
         [HttpGet("movimientos")]
@@ -115,25 +117,63 @@ namespace ApiGestionStock.Controllers
         }
         #endregion
 
-        [HttpPost]
-        [Route("{idVenta}/detalles")] // Usa una ruta específica para agregar detalles a una venta
-        public async Task<IActionResult> AgregarDetalleVenta(int idVenta, [FromBody] DetallesVenta detalle) // Recibe el detalle en el cuerpo de la petición
+        [HttpPost("ventas")]
+        public async Task<ActionResult<int>> CreateVenta(DateTime fechaVenta, int idTienda, int idUsuario, decimal importeTotal, int idCliente)
         {
             try
             {
-                if (!ModelState.IsValid)
-                {
-                    return BadRequest(ModelState); // Devuelve errores de validación si el modelo no es válido
-                }
-
-                await this.repo.AgregarDetalleVenta(idVenta, detalle);
-
-                return CreatedAtAction(nameof(GetDetalleVenta), new { idVenta = idVenta, idDetalle = detalle.IdProducto }, detalle); // Devuelve 201 Created y la ubicación del recurso creado
+                int ventaId = await this.repo.CreateVentaAsync(fechaVenta, idTienda, idUsuario, importeTotal, idCliente);
+                return CreatedAtAction(nameof(GetVenta), new { id = ventaId }, ventaId); // Devuelve 201 Created y la ruta al recurso creado
             }
             catch (Exception ex)
             {
-                // Log the exception here
-                return StatusCode(500, "Error interno del servidor: " + ex.Message); // Devuelve un error 500 y un mensaje descriptivo
+                this.logger.LogError(ex, "Error al crear la venta.");
+                return StatusCode(500, "Error al crear la venta.");
+            }
+        }
+
+        [HttpGet("{id}")]
+        public async Task<ActionResult<Venta>> GetVenta(int id)
+        {
+            try
+            {
+                //Supongamos que el IInventarioRepository también tiene un método para obtener una venta por ID
+                var venta = await this.repo.GetVentaByIdAsync(id); // Debes implementarlo en tu repo
+                if (venta == null)
+                {
+                    return NotFound();
+                }
+                return Ok(venta);
+            }
+            catch (Exception ex)
+            {
+                this.logger.LogError(ex, "Error al obtener la venta con ID {id}.", id);
+                return StatusCode(500, "Error al obtener la venta.");
+            }
+        }
+
+        [HttpPost("ventas/{idVenta}/detalles")]
+        public async Task<ActionResult> AgregarDetalleVenta(int idVenta, [FromBody] DetallesVenta detalle)
+        {
+            if (detalle == null || !ModelState.IsValid)
+            {
+                return BadRequest(ModelState); // Devuelve detalles de los errores de validación
+            }
+
+            using var transaction = await this.context.Database.BeginTransactionAsync();
+            try
+            {
+                await this.repo.AgregarDetalleVentaAsync(idVenta, detalle);
+
+                await transaction.CommitAsync();
+
+                return Ok("Detalle de venta agregado con éxito.");
+            }
+            catch (Exception ex)
+            {
+                await transaction.RollbackAsync();
+                this.logger.LogError(ex, "Error al agregar detalle de venta");
+                return StatusCode(500, "Error interno del servidor");
             }
         }
 

@@ -14,10 +14,12 @@ namespace ApiGestionStock.Repositories
     public class RepositoryAlmacen : IRepositoryAlmacen
     {
         private AlmacenesContext context;
+        private readonly ILogger<RepositoryAlmacen> logger;
 
-        public RepositoryAlmacen(AlmacenesContext context)
+        public RepositoryAlmacen(AlmacenesContext context, ILogger<RepositoryAlmacen> logger)
         {
             this.context = context;
+            this.logger = logger;
         }
         #region Productos
         public async Task<List<Producto>> GetProductosAsync()
@@ -265,7 +267,7 @@ namespace ApiGestionStock.Repositories
         #endregion
 
         #region Inventario
-        public async Task<int> CreateVentaAsync(DateTime fecha, int idTienda, int idUsuario, int importeTotal, int idCliente)
+        public async Task<int> CreateVentaAsync(DateTime fecha, int idTienda, int idUsuario, decimal importeTotal, int idCliente)
         {
             Venta nuevaVenta = new Venta
             {
@@ -282,60 +284,57 @@ namespace ApiGestionStock.Repositories
             return nuevaVenta.IdVenta;
         }
 
-
-
-        public async Task AgregarDetalleVenta(int idVenta, DetallesVenta detalle)
+        public async Task<Venta> GetVentaByIdAsync(int idVenta)
         {
-            using (var transaction = await context.Database.BeginTransactionAsync())
+            return await this.context.Ventas.FirstOrDefaultAsync(v => v.IdVenta == idVenta);
+        }
+
+        public async Task AgregarDetalleVentaAsync(int idVenta, DetallesVenta detalle)
+        {
+            try
             {
-                try
+                using var command = this.context.Database.GetDbConnection().CreateCommand();
+
+                // *** ESTO ES LO CRUCIAL ***
+                command.Transaction = context.Database.CurrentTransaction.GetDbTransaction();
+
+                command.CommandText = "AgregarDetalleVenta";
+                command.CommandType = System.Data.CommandType.StoredProcedure;
+
+                command.Parameters.Add(new SqlParameter("@IdVenta", idVenta));
+                command.Parameters.Add(new SqlParameter("@IdProducto", detalle.IdProducto));
+                command.Parameters.Add(new SqlParameter("@Cantidad", detalle.Cantidad));
+                command.Parameters.Add(new SqlParameter("@PrecioUnidad", detalle.PrecioUnidad));
+
+                await command.ExecuteNonQueryAsync();
+
+                // 1. Actualizar el inventario
+                var inventario = new Inventario
                 {
-                    using (var command = context.Database.GetDbConnection().CreateCommand())
-                    {
-                        command.Transaction = transaction.GetDbTransaction();
-                        command.CommandText = "AgregarDetalleVenta";
-                        command.CommandType = CommandType.StoredProcedure;
+                    IdProducto = detalle.IdProducto,
+                    FechaMovimiento = DateTime.Now,
+                    TipoMovimiento = "Salida",
+                    Cantidad = detalle.Cantidad,
+                    IdMovimiento = idVenta
+                };
 
-                        // Parámetros del Procedimiento Almacenado
-                        command.Parameters.Add(new SqlParameter("@IdVenta", idVenta));
-                        command.Parameters.Add(new SqlParameter("@IdProducto", detalle.IdProducto));
-                        command.Parameters.Add(new SqlParameter("@Cantidad", detalle.Cantidad));
-                        command.Parameters.Add(new SqlParameter("@PrecioUnidad", detalle.PrecioUnidad));
+                this.context.Inventarios.Add(inventario);
+                await this.context.SaveChangesAsync();
 
-                        await command.ExecuteNonQueryAsync();
-
-                        //No hay necesidad de hacer otro procedimiento almacenado. Esto lo podemos hacer en .net para mantener mejor mantenibilidad de la lógica
-                        //1. Actualizar el inventario
-                        var inventario = new Inventario
-                        {
-                            IdProducto = detalle.IdProducto,
-                            FechaMovimiento = DateTime.Now,
-                            TipoMovimiento = "Salida",
-                            Cantidad = detalle.Cantidad,
-                            IdMovimiento = idVenta  //Asumimos que el ID de la venta es el ID del movimiento en el inventario.
-                        };
-
-                        context.Inventarios.Add(inventario);
-                        await context.SaveChangesAsync();
-
-                        // 2. Actualizar el stock en ProductosTienda (puedes optar por manejar esto en el SP si lo prefieres)
-                        var productoTienda = await context.ProductosTienda
-                                                  .FirstOrDefaultAsync(pt => pt.IdProducto == detalle.IdProducto && pt.IdTienda == 1); //Asumimos que esto debe ser parametrizado para la tienda
-                        if (productoTienda != null)
-                        {
-                            productoTienda.Cantidad -= detalle.Cantidad;
-                            context.ProductosTienda.Update(productoTienda);
-                            await context.SaveChangesAsync();
-                        }
-
-                        await transaction.CommitAsync();
-                    }
-                }
-                catch (Exception)
+                // 2. Actualizar el stock en ProductosTienda (puedes optar por manejar esto en el SP si lo prefieres)
+                var productoTienda = await this.context.ProductosTienda
+                    .FirstOrDefaultAsync(pt => pt.IdProducto == detalle.IdProducto && pt.IdTienda == 1); //Asumimos que esto debe ser parametrizado para la tienda
+                if (productoTienda != null)
                 {
-                    await transaction.RollbackAsync();
-                    throw; // Re-lanza la excepción para que se maneje en la capa superior
+                    productoTienda.Cantidad -= detalle.Cantidad;
+                    this.context.ProductosTienda.Update(productoTienda);
+                    await this.context.SaveChangesAsync();
                 }
+            }
+            catch (Exception ex)
+            {
+                this.logger.LogError(ex, "Error al agregar detalle de venta");
+                throw; // Re-lanza la excepción para que el controlador la maneje
             }
         }
 

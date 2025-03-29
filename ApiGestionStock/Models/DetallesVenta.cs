@@ -25,8 +25,5 @@ namespace ApiGestionStock.Models
         [Required(ErrorMessage = "El precio unitario es obligatorio")]
         [Column("PrecioUnidad")]
         public decimal PrecioUnidad { get; set; }
-
-        public Venta Venta { get; set; }
-        public Producto Producto { get; set; }
     }
 }

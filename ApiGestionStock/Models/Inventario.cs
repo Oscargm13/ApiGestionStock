@@ -10,7 +10,7 @@ namespace ApiGestionStock.Models
         [Column("IdInventario")]
         public int IdInventario { get; set; }
 
-        [ForeignKey("IdProducto")]
+        [ForeignKey("Producto")]
         public int IdProducto { get; set; }
 
         [Required(ErrorMessage = "La fecha es obligatoria")]
@@ -30,6 +30,5 @@ namespace ApiGestionStock.Models
         [Column("IdMovimiento")]
         public int IdMovimiento { get; set; }
 
-        public Producto Producto { get; set; }
     }
 }

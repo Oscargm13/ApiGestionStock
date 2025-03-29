@@ -55,8 +55,9 @@ namespace ApiGestionStock.Interfaces
         Task<List<Compra>> GetComprasAsync();
         Task VerificarStockBajoYCrearNotificacionesAsync(Venta venta, List<DetallesVenta> detalles);
         Task EjecutarProcedimientoAlmacenadoVentaAsync(Venta venta, List<DetallesVenta> detalles);
-        Task<int>CreateVentaAsync(DateTime fecha, int idTienda, int idUsuario, int importeTotal, int idCliente);
-        Task AgregarDetalleVenta(int idVenta, DetallesVenta detalle);
+        Task<int>CreateVentaAsync(DateTime fecha, int idTienda, int idUsuario, decimal importeTotal, int idCliente);
+        Task AgregarDetalleVentaAsync(int idVenta, DetallesVenta detalle);
+        Task<Venta> GetVentaByIdAsync(int idVenta);
         #endregion
 
         // Usuario

@@ -29,8 +29,5 @@ namespace ApiGestionStock.Models
         [Column("IdCliente")]
         public int IdCliente { get; set; }
 
-        public Tienda Tienda { get; set; }
-        public Usuario Usuario { get; set; }
-        public ICollection<DetallesVenta> DetallesVentas { get; set; }
     }
 }
