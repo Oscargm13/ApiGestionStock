@@ -16,5 +16,13 @@ namespace ApiGestionStock.Data
         public DbSet<ProductosTienda> ProductosTienda { get; set; }
         public DbSet<Tienda> Tiendas { get; set; }
         public DbSet<ProductoProveedor> ProductosProveedores { get; set; }
+        public DbSet<Usuario> Usuarios { get; set; }
+        public DbSet<Rol> Roles { get; set; }
+        public DbSet<Notificacion> Notificaciones { get; set; }
+        public DbSet<VistaInventarioDetalladoVenta> vistaInventarioDetalladoVenta { get; set; }
+        public DbSet<DetallesVenta> DetallesVenta { get; set; }
+        public DbSet<Venta> Ventas { get; set; }
+        public DbSet<Compra> Compras { get; set; }
+        public DbSet<Inventario> Inventarios { get; set; }
     }
 }

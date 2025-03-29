@@ -1,4 +1,5 @@
-﻿using ApiGestionStock.Models;
+﻿using ApiGestionStock.Interfaces;
+using ApiGestionStock.Models;
 using ApiGestionStock.Repositories;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
@@ -9,8 +10,8 @@ namespace ApiGestionStock.Controllers
     [ApiController]
     public class ProveedoresController : ControllerBase
     {
-        private RepositoryAlmacen repo;
-        public ProveedoresController(RepositoryAlmacen repo)
+        private IRepositoryAlmacen repo;
+        public ProveedoresController(IRepositoryAlmacen repo)
         {
             this.repo = repo;
         }

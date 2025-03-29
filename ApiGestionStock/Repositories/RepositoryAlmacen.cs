@@ -1,7 +1,13 @@
-﻿using ApiGestionStock.Data;
+﻿using System.Data;
+using System.Xml.Linq;
+using ApiGestionStock.Data;
 using ApiGestionStock.Interfaces;
 using ApiGestionStock.Models;
+using Microsoft.Data.SqlClient;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Storage;
+using static System.Net.Mime.MediaTypeNames;
+using static System.Runtime.InteropServices.JavaScript.JSType;
 
 namespace ApiGestionStock.Repositories
 {
@@ -259,103 +265,400 @@ namespace ApiGestionStock.Repositories
         #endregion
 
         #region Inventario
-        public Task<List<VistaInventarioDetalladoVenta>> GetMovimientos()
+        public async Task<int> CreateVentaAsync(DateTime fecha, int idTienda, int idUsuario, int importeTotal, int idCliente)
         {
-            throw new NotImplementedException();
+            Venta nuevaVenta = new Venta
+            {
+                FechaVenta = fecha,
+                IdTienda = idTienda,
+                IdUsuario = idUsuario,
+                ImporteTotal = importeTotal,
+                IdCliente = idCliente
+            };
+
+            this.context.Ventas.Add(nuevaVenta);
+            await this.context.SaveChangesAsync();
+
+            return nuevaVenta.IdVenta;
         }
 
-        public Task<List<Notificacion>> GetNotificaciones()
+
+
+        public async Task AgregarDetalleVenta(int idVenta, DetallesVenta detalle)
         {
-            throw new NotImplementedException();
+            using (var transaction = await context.Database.BeginTransactionAsync())
+            {
+                try
+                {
+                    using (var command = context.Database.GetDbConnection().CreateCommand())
+                    {
+                        command.Transaction = transaction.GetDbTransaction();
+                        command.CommandText = "AgregarDetalleVenta";
+                        command.CommandType = CommandType.StoredProcedure;
+
+                        // Parámetros del Procedimiento Almacenado
+                        command.Parameters.Add(new SqlParameter("@IdVenta", idVenta));
+                        command.Parameters.Add(new SqlParameter("@IdProducto", detalle.IdProducto));
+                        command.Parameters.Add(new SqlParameter("@Cantidad", detalle.Cantidad));
+                        command.Parameters.Add(new SqlParameter("@PrecioUnidad", detalle.PrecioUnidad));
+
+                        await command.ExecuteNonQueryAsync();
+
+                        //No hay necesidad de hacer otro procedimiento almacenado. Esto lo podemos hacer en .net para mantener mejor mantenibilidad de la lógica
+                        //1. Actualizar el inventario
+                        var inventario = new Inventario
+                        {
+                            IdProducto = detalle.IdProducto,
+                            FechaMovimiento = DateTime.Now,
+                            TipoMovimiento = "Salida",
+                            Cantidad = detalle.Cantidad,
+                            IdMovimiento = idVenta  //Asumimos que el ID de la venta es el ID del movimiento en el inventario.
+                        };
+
+                        context.Inventarios.Add(inventario);
+                        await context.SaveChangesAsync();
+
+                        // 2. Actualizar el stock en ProductosTienda (puedes optar por manejar esto en el SP si lo prefieres)
+                        var productoTienda = await context.ProductosTienda
+                                                  .FirstOrDefaultAsync(pt => pt.IdProducto == detalle.IdProducto && pt.IdTienda == 1); //Asumimos que esto debe ser parametrizado para la tienda
+                        if (productoTienda != null)
+                        {
+                            productoTienda.Cantidad -= detalle.Cantidad;
+                            context.ProductosTienda.Update(productoTienda);
+                            await context.SaveChangesAsync();
+                        }
+
+                        await transaction.CommitAsync();
+                    }
+                }
+                catch (Exception)
+                {
+                    await transaction.RollbackAsync();
+                    throw; // Re-lanza la excepción para que se maneje en la capa superior
+                }
+            }
         }
 
-        public Task<bool> ExisteNotificacion(int idProducto, int idTienda, AlmacenesContext context)
+        public async Task<List<VistaInventarioDetalladoVenta>> GetMovimientosAsync()
         {
-            throw new NotImplementedException();
+            return await this.context.vistaInventarioDetalladoVenta
+                .Include(i => i.Producto)
+                .AsNoTracking()
+                .ToListAsync();
         }
 
-        public Task CrearNotificacion(Notificacion notificacion, AlmacenesContext context)
+        public async Task<List<Notificacion>> GetNotificacionesAsync()
         {
-            throw new NotImplementedException();
+            return await this.context.Notificaciones.ToListAsync();
         }
 
-        public Task ProcesarVenta(Venta venta, List<DetallesVenta> detalles)
+        public async Task<bool> ExisteNotificacionAsync(int idProducto, int idTienda)
         {
-            throw new NotImplementedException();
+            return await this.context.Notificaciones
+                .AnyAsync(n => n.IdProducto == idProducto && n.IdTienda == idTienda);
         }
 
-        public Task ProcesarCompra(Compra compra, List<DetallesCompra> detalles)
+        public async Task CreateNotificacionAsync(Notificacion notificacion)
         {
-            throw new NotImplementedException();
+            this.context.Notificaciones.Add(notificacion);
+            await this.context.SaveChangesAsync();
         }
 
-        public Task<decimal> GetIngresosMes(int mes, int year)
+        //public async Task ProcesarVentaAsync(Venta venta, List<DetallesVenta> detalles)
+        //{
+        //    using var transaction = await this.context.Database.BeginTransactionAsync();
+        //    try
+        //    {
+        //        using var command = this.context.Database.GetDbConnection().CreateCommand();
+        //        command.Transaction = transaction.GetDbTransaction();
+        //        command.CommandText = "ProcesarVentaStock";
+        //        command.CommandType = CommandType.StoredProcedure;
+
+        //        command.Parameters.Add(new SqlParameter("@FechaVenta", venta.FechaVenta));
+        //        command.Parameters.Add(new SqlParameter("@IdTienda", venta.IdTienda));
+        //        command.Parameters.Add(new SqlParameter("@IdUsuario", venta.IdUsuario));
+        //        command.Parameters.Add(new SqlParameter("@ImporteTotal", venta.ImporteTotal));
+        //        command.Parameters.Add(new SqlParameter("@IdCliente", venta.IdCliente));
+
+        //        var detallesXml = new XElement("Detalles",
+        //            detalles.Select(d => new XElement("Detalle",
+        //                new XElement("IdProducto", d.IdProducto),
+        //                new XElement("Cantidad", d.Cantidad),
+        //                new XElement("PrecioUnidad", d.PrecioUnidad)
+        //            ))
+        //        );
+
+        //        command.Parameters.Add(new SqlParameter("@DetallesVenta", detallesXml.ToString()));
+
+        //        await command.ExecuteNonQueryAsync();
+        //        command.Parameters.Clear();
+
+        //        // Verificar stock bajo y crear notificaciones (usando EF Core)
+        //        foreach (var detalle in detalles)
+        //        {
+        //            var producto = await this.context.ProductosTienda
+        //                .FirstOrDefaultAsync(pt => pt.IdProducto == detalle.IdProducto && pt.IdTienda == venta.IdTienda);
+
+        //            if (producto != null && producto.Cantidad < 10) // Umbral de stock bajo
+        //            {
+        //                var notificacionExistente = await this.ExisteNotificacionAsync(detalle.IdProducto, venta.IdTienda);
+        //                if (!notificacionExistente)
+        //                {
+        //                    var notificacion = new Notificacion
+        //                    {
+        //                        Mensaje = $"Aviso de stock bajo: En {venta.IdTienda} la cantidad de {detalle.IdProducto} es de {producto.Cantidad}.",
+        //                        Fecha = DateTime.Now,
+        //                        IdProducto = detalle.IdProducto,
+        //                        IdTienda = venta.IdTienda
+        //                    };
+        //                    await this.CreateNotificacionAsync(notificacion);
+        //                }
+        //            }
+        //        }
+
+        //        await transaction.CommitAsync();
+        //    }
+        //    catch (Exception)
+        //    {
+        //        await transaction.RollbackAsync();
+        //        throw;
+        //    }
+        //}
+
+        public async Task EjecutarProcedimientoAlmacenadoVentaAsync(Venta venta, List<DetallesVenta> detalles)
         {
-            throw new NotImplementedException();
+            using var command = this.context.Database.GetDbConnection().CreateCommand();
+            command.CommandText = "dbo.InsertarVentaYDetalles"; // Nombre completo (esquema.nombre)
+            command.CommandType = CommandType.StoredProcedure;
+
+            command.Parameters.Add(new SqlParameter("@FechaVenta", venta.FechaVenta));
+            command.Parameters.Add(new SqlParameter("@IdTienda", venta.IdTienda));
+            command.Parameters.Add(new SqlParameter("@IdUsuario", venta.IdUsuario));
+            command.Parameters.Add(new SqlParameter("@ImporteTotal", venta.ImporteTotal));
+            command.Parameters.Add(new SqlParameter("@IdCliente", venta.IdCliente));
+
+            // Crear el DataTable para el TVP
+            var detallesTable = new DataTable();
+            detallesTable.Columns.Add("IdProducto", typeof(int));
+            detallesTable.Columns.Add("Cantidad", typeof(int));
+            detallesTable.Columns.Add("PrecioUnidad", typeof(decimal));
+
+            foreach (var detalle in detalles)
+            {
+                detallesTable.Rows.Add(detalle.IdProducto, detalle.Cantidad, detalle.PrecioUnidad);
+            }
+
+            // Agregar el parámetro del TVP
+            var detallesParameter = new SqlParameter("@DetallesVenta", SqlDbType.Structured);
+            detallesParameter.TypeName = "dbo.DetallesVentaTableType"; // Nombre completo del tipo
+            detallesParameter.Value = detallesTable;
+            command.Parameters.Add(detallesParameter);
+
+            await command.ExecuteNonQueryAsync();
         }
 
-        public Task<DetallesVenta> GetDetallesVenta(int idDetallesVenta)
+        public async Task VerificarStockBajoYCrearNotificacionesAsync(Venta venta, List<DetallesVenta> detalles)
         {
-            throw new NotImplementedException();
+            foreach (var detalle in detalles)
+            {
+                var producto = await this.context.ProductosTienda
+                    .FirstOrDefaultAsync(pt => pt.IdProducto == detalle.IdProducto && pt.IdTienda == venta.IdTienda);
+
+                if (producto != null && producto.Cantidad < 10)
+                {
+                    var notificacionExistente = await ExisteNotificacionAsync(detalle.IdProducto, venta.IdTienda);
+                    if (!notificacionExistente)
+                    {
+                        var notificacion = new Notificacion
+                        {
+                            Mensaje = $"Aviso de stock bajo: En {venta.IdTienda} la cantidad de {detalle.IdProducto} es de {producto.Cantidad}.",
+                            Fecha = DateTime.Now,
+                            IdProducto = detalle.IdProducto,
+                            IdTienda = venta.IdTienda
+                        };
+                        await CreateNotificacionAsync(notificacion);
+                    }
+                }
+            }
         }
 
-        public Task DeleteNotificacion(int idNotificacion)
+        public async Task ProcesarCompraAsync(Compra compra, List<DetallesCompra> detalles)
         {
-            throw new NotImplementedException();
+            using var connection = this.context.Database.GetDbConnection();
+            await connection.OpenAsync();
+
+            using var command = connection.CreateCommand();
+            command.CommandText = "ProcesoCompraNotificaciones";
+            command.CommandType = CommandType.StoredProcedure;
+
+            command.Parameters.Add(new SqlParameter("@FechaCompra", compra.FechaCompra));
+            command.Parameters.Add(new SqlParameter("@IdProveedor", compra.IdProveedor));
+            command.Parameters.Add(new SqlParameter("@IdTienda", compra.IdTienda));
+            command.Parameters.Add(new SqlParameter("@ImporteTotal", compra.ImporteTotal));
+            command.Parameters.Add(new SqlParameter("@IdUsuario", compra.IdUsuario));
+
+            var detallesXml = new XElement("Detalles",
+                detalles.Select(d => new XElement("Detalle",
+                    new XElement("IdProducto", d.IdProducto),
+                    new XElement("Cantidad", d.Cantidad),
+                    new XElement("PrecioUnidad", d.PrecioUnidad)
+                ))
+            );
+
+            command.Parameters.Add(new SqlParameter("@DetallesCompra", detallesXml.ToString()));
+
+            await command.ExecuteNonQueryAsync();
+            command.Parameters.Clear();
         }
 
-        public Task<List<Venta>> GetVentas()
+        public async Task<decimal> GetIngresosMesAsync(int mes, int year)
         {
-            throw new NotImplementedException();
+            using var command = this.context.Database.GetDbConnection().CreateCommand();
+            command.CommandText = "IngresosMes";
+            command.CommandType = CommandType.StoredProcedure;
+
+            command.Parameters.Add(new SqlParameter("@mes", mes));
+            command.Parameters.Add(new SqlParameter("@año", year));
+
+            SqlParameter ingresosParameter = new("@ingresos", SqlDbType.Decimal) { Direction = ParameterDirection.Output };
+            command.Parameters.Add(ingresosParameter);
+
+            await this.context.Database.OpenConnectionAsync();
+            await command.ExecuteNonQueryAsync();
+
+            decimal ingresos = (decimal)ingresosParameter.Value;
+            command.Parameters.Clear();
+
+            return ingresos;
         }
 
-        public Task<List<Compra>> GetCompras()
+        public async Task<DetallesVenta> GetDetallesVentaAsync(int idDetallesVenta)
         {
-            throw new NotImplementedException();
+            return await this.context.DetallesVenta
+                .FirstOrDefaultAsync(dv => dv.IdProducto == idDetallesVenta);
+        }
+
+        public async Task DeleteNotificacionAsync(int idNotificacion)
+        {
+            var notificacion = await this.context.Notificaciones.FindAsync(idNotificacion);
+
+            if (notificacion != null)
+            {
+                this.context.Notificaciones.Remove(notificacion);
+                await this.context.SaveChangesAsync();
+            }
+        }
+
+        public async Task<List<Venta>> GetVentasAsync()
+        {
+            return await this.context.Ventas.ToListAsync();
+        }
+
+        public async Task<List<Compra>> GetComprasAsync()
+        {
+            return await this.context.Compras.ToListAsync();
         }
         #endregion
 
         #region Usuario
-        public Task<List<Usuario>> GetUsuariosAsync()
+        public async Task<List<Usuario>> GetUsuariosAsync()
         {
-            throw new NotImplementedException();
+            return await this.context.Usuarios.ToListAsync();
         }
 
-        public Task<List<Rol>> GetRoles()
+        public async Task<List<Rol>> GetRolesAsync()
         {
-            throw new NotImplementedException();
+            return await this.context.Roles.ToListAsync();
         }
 
-        public Task PostUsuario(string nombre, string email, string pass, int idRole)
+        public async Task CreateUsuarioAsync(string nombre, string email, string password, int idRol, string imagen, string nombreEmpresa)
         {
-            throw new NotImplementedException();
+            Usuario usuario = new Usuario
+            {
+                Nombre = nombre,
+                Email = email,
+                Password = password,
+                IdRol = idRol,
+                Imagen = imagen,
+                nombreEmpresa = nombreEmpresa
+            };
+
+            this.context.Usuarios.Add(usuario);
+            await this.context.SaveChangesAsync();
         }
 
-        public Task<Usuario> CompararUsuario(string nombreUsuario, string password)
+        public async Task<Usuario> CompararUsuarioAsync(string nombreUsuario, string password)
         {
-            throw new NotImplementedException();
+            return await this.context.Usuarios.FirstOrDefaultAsync(u => u.Nombre == nombreUsuario && u.Password == password);
         }
 
-        public Task<Usuario> findUsuario(int idUsuario)
+        public async Task<Usuario> FindUsuarioAsync(int idUsuario)
         {
-            throw new NotImplementedException();
+            return await this.context.Usuarios.FirstOrDefaultAsync(u => u.IdUsuario == idUsuario);
+        }
+
+        public async Task DeleteUsuarioAsync(int idUsuario)
+        {
+            var usuario = await this.context.Usuarios.FindAsync(idUsuario);
+
+            if (usuario != null)
+            {
+                this.context.Usuarios.Remove(usuario);
+                await this.context.SaveChangesAsync();
+            }
         }
         #endregion
 
         #region Tienda
-        public List<Tienda> GetTiendas()
+        public async Task<List<Tienda>> GetTiendasAsync()
         {
-            throw new NotImplementedException();
+            return await this.context.Tiendas.ToListAsync();
         }
 
-        public Tienda FindTienda(int idTienda)
+        public async Task<Tienda> FindTiendaAsync(int idTienda)
         {
-            throw new NotImplementedException();
+            return await this.context.Tiendas.FirstOrDefaultAsync(t => t.IdTienda == idTienda);
         }
 
-        public void CrearTienda(int idTienda, string nombre, string direccion, string telefono, string email)
+        public async Task CreateTiendaAsync(string nombre, string direccion, string telefono, string email)
         {
-            throw new NotImplementedException();
+            Tienda nuevaTienda = new Tienda
+            {
+                Nombre = nombre,
+                Direccion = direccion,
+                Telefono = telefono,
+                Email = email
+            };
+
+            this.context.Tiendas.Add(nuevaTienda);
+            await this.context.SaveChangesAsync();
+        }
+
+        public async Task UpdateTiendaAsync(int idTienda, string nombre, string direccion, string telefono, string email)
+        {
+            Tienda tienda = await this.FindTiendaAsync(idTienda);
+
+            if (tienda != null)
+            {
+                tienda.Nombre = nombre;
+                tienda.Direccion = direccion;
+                tienda.Telefono = telefono;
+                tienda.Email = email;
+
+                this.context.Tiendas.Update(tienda);
+                await this.context.SaveChangesAsync();
+            }
+        }
+
+        public async Task DeleteTiendaAsync(int idTienda)
+        {
+            Tienda tienda = await this.FindTiendaAsync(idTienda);
+
+            if (tienda != null)
+            {
+                this.context.Tiendas.Remove(tienda);
+                await this.context.SaveChangesAsync();
+            }
         }
         #endregion
     }

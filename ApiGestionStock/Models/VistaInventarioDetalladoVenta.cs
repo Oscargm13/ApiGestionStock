@@ -49,7 +49,7 @@ namespace ApiGestionStock.Models
         [Column("IdInventario")]
         public int IdInventario { get; set; }
 
-        [Column("IdProducto")]
+        [ForeignKey("Producto")]
         public int IdProducto { get; set; }
 
         [Column("NombreProducto")]

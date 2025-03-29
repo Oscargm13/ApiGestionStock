@@ -42,33 +42,40 @@ namespace ApiGestionStock.Interfaces
 
         // Inventario
         #region
-        Task<List<VistaInventarioDetalladoVenta>> GetMovimientos();
-        Task<List<Notificacion>> GetNotificaciones();
-        Task<bool> ExisteNotificacion(int idProducto, int idTienda, AlmacenesContext context);
-        Task CrearNotificacion(Notificacion notificacion, AlmacenesContext context);
-        Task ProcesarVenta(Venta venta, List<DetallesVenta> detalles);
-        Task ProcesarCompra(Compra compra, List<DetallesCompra> detalles);
-        Task<decimal> GetIngresosMes(int mes, int year);
-        Task<DetallesVenta> GetDetallesVenta(int idDetallesVenta);
-        Task DeleteNotificacion(int idNotificacion);
-        Task<List<Venta>> GetVentas();
-        Task<List<Compra>> GetCompras();
+        Task<List<VistaInventarioDetalladoVenta>> GetMovimientosAsync();
+        Task<List<Notificacion>> GetNotificacionesAsync();
+        Task<bool> ExisteNotificacionAsync(int idProducto, int idTienda);
+        Task CreateNotificacionAsync(Notificacion notificacion);
+        //Task ProcesarVentaAsync(Venta venta, List<DetallesVenta> detalles);
+        Task ProcesarCompraAsync(Compra compra, List<DetallesCompra> detalles);
+        Task<decimal> GetIngresosMesAsync(int mes, int year);
+        Task<DetallesVenta> GetDetallesVentaAsync(int idDetallesVenta);
+        Task DeleteNotificacionAsync(int idNotificacion);
+        Task<List<Venta>> GetVentasAsync();
+        Task<List<Compra>> GetComprasAsync();
+        Task VerificarStockBajoYCrearNotificacionesAsync(Venta venta, List<DetallesVenta> detalles);
+        Task EjecutarProcedimientoAlmacenadoVentaAsync(Venta venta, List<DetallesVenta> detalles);
+        Task<int>CreateVentaAsync(DateTime fecha, int idTienda, int idUsuario, int importeTotal, int idCliente);
+        Task AgregarDetalleVenta(int idVenta, DetallesVenta detalle);
         #endregion
 
         // Usuario
         #region
         Task<List<Usuario>> GetUsuariosAsync();
-        Task<List<Rol>> GetRoles();
-        Task PostUsuario(string nombre, string email, string pass, int idRole);
-        Task<Usuario> CompararUsuario(string nombreUsuario, string password);
-        Task<Usuario> findUsuario(int idUsuario);
+        Task<List<Rol>> GetRolesAsync();
+        Task CreateUsuarioAsync(string nombre, string email, string pass, int idRole, string imagen, string nombreEmpresa);
+        Task<Usuario> CompararUsuarioAsync(string nombreUsuario, string password);
+        Task<Usuario> FindUsuarioAsync(int idUsuario);
+        Task DeleteUsuarioAsync(int idUsuario);
         #endregion
 
         // Tiendas
         #region
-        List<Tienda> GetTiendas();
-        Tienda FindTienda(int idTienda);
-        void CrearTienda(int idTienda, string nombre, string direccion, string telefono, string email);
+        Task<List<Tienda>> GetTiendasAsync();
+        Task<Tienda> FindTiendaAsync(int idTienda);
+        Task CreateTiendaAsync(string nombre, string direccion, string telefono, string email);
+        Task UpdateTiendaAsync(int idTienda, string nombre, string direccion, string telefono, string email);
+        Task DeleteTiendaAsync(int idTienda);
         #endregion
     }
 }

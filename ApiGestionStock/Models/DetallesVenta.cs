@@ -11,11 +11,11 @@ namespace ApiGestionStock.Models
         public int IdDetallesVenta { get; set; }
 
         [Required(ErrorMessage = "La venta es obligatoria")]
-        [Column("IdVenta")]
+        [ForeignKey("Venta")]
         public int IdVenta { get; set; }
 
         [Required(ErrorMessage = "El producto es obligatorio")]
-        [Column("IdProducto")]
+        [ForeignKey("Producto")]
         public int IdProducto { get; set; }
 
         [Required(ErrorMessage = "La cantidad es obligatoria")]

@@ -15,11 +15,11 @@ namespace ApiGestionStock.Models
         public DateTime FechaVenta { get; set; }
 
         [Required(ErrorMessage = "La tienda es obligatoria")]
-        [Column("IdTienda")]
+        [ForeignKey("Tienda")]
         public int IdTienda { get; set; }
 
         [Required(ErrorMessage = "El usuario es obligatorio")]
-        [Column("IdUsuario")]
+        [ForeignKey("Usuario")]
         public int IdUsuario { get; set; }
 
         [Required(ErrorMessage = "El importe total es obligatorio")]
