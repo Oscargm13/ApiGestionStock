@@ -1,4 +1,5 @@
-﻿using System.Xml.Linq;
+﻿using System.Data;
+using System.Xml.Linq;
 using ApiGestionStock.Data;
 using ApiGestionStock.Interfaces;
 using ApiGestionStock.Models;
@@ -89,26 +90,6 @@ namespace ApiGestionStock.Controllers
             }
         }
 
-        //[HttpPost("ventas")]
-        //public async Task<ActionResult> ProcesarVenta([FromBody] VentaConDetalles ventaConDetalles)
-        //{
-        //    if (ventaConDetalles == null || ventaConDetalles.Venta == null || ventaConDetalles.Detalles == null || ventaConDetalles.Detalles.Count == 0)
-        //    {
-        //        return BadRequest("Datos de venta o detalles inválidos.");
-        //    }
-
-        //    try
-        //    {
-        //        await this.repo.ProcesarVentaAsync(ventaConDetalles.Venta, ventaConDetalles.Detalles);
-        //        return Ok("Venta procesada exitosamente.");
-        //    }
-        //    catch (Exception ex)
-        //    {
-        //        // Loguear el error
-        //        return StatusCode(500, "Error al procesar venta: " + ex.Message);
-        //    }
-        //}
-
         #region Clases de Ayuda para Procesar Venta
         public class VentaConDetalles
         {
@@ -129,6 +110,106 @@ namespace ApiGestionStock.Controllers
             {
                 this.logger.LogError(ex, "Error al crear la venta.");
                 return StatusCode(500, "Error al crear la venta.");
+            }
+        }
+        #region Venta DTOs
+
+        public class VentaConDetallesDto
+        {
+            public DateTime FechaVenta { get; set; }
+            public int IdTienda { get; set; }
+            public int IdUsuario { get; set; }
+            public decimal ImporteTotal { get; set; }
+            public int IdCliente { get; set; }
+            public List<DetalleVentaDto> Detalles { get; set; }
+        }
+
+        public class DetalleVentaDto
+        {
+            public int IdProducto { get; set; }
+            public int Cantidad { get; set; }
+            public decimal PrecioUnidad { get; set; }
+        }
+
+        #endregion
+
+        [HttpPost("procesarventa")]
+        public async Task<ActionResult> ProcesarVenta([FromBody] VentaConDetallesDto ventaConDetallesDto)
+        {
+            if (ventaConDetallesDto == null || !ModelState.IsValid)
+            {
+                return BadRequest(ModelState);
+            }
+
+            using var transaction = await context.Database.BeginTransactionAsync();
+            try
+            {
+                // 1. Mapear VentaConDetallesDto a Venta
+                var venta = new Venta
+                {
+                    FechaVenta = ventaConDetallesDto.FechaVenta,
+                    IdTienda = ventaConDetallesDto.IdTienda,
+                    IdUsuario = ventaConDetallesDto.IdUsuario,
+                    ImporteTotal = ventaConDetallesDto.ImporteTotal,
+                    IdCliente = ventaConDetallesDto.IdCliente
+                };
+
+                // 2. Mapear DetallesVentaDto a Lista de DetallesVenta
+                var detallesVentaList = ventaConDetallesDto.Detalles.Select(dto => new DetallesVenta
+                {
+                    IdProducto = dto.IdProducto,
+                    Cantidad = dto.Cantidad,
+                    PrecioUnidad = dto.PrecioUnidad
+                }).ToList();
+
+                // 3. Ejecutar Procedimiento Almacenado
+                await repo.EjecutarProcedimientoAlmacenadoVentaAsync(venta, detallesVentaList);
+
+                // 4. Verificar Stock y Crear Notificaciones
+                await repo.VerificarStockBajoYCrearNotificacionesAsync(venta, detallesVentaList);
+
+                await transaction.CommitAsync();
+
+                return Ok("Venta procesada con éxito.");
+            }
+            catch (Exception ex)
+            {
+                await transaction.RollbackAsync();
+                logger.LogError(ex, "Error al procesar la venta");
+                return StatusCode(500, "Error al procesar la venta");
+            }
+        }
+
+        private async Task VerificarStockYCrearNotificacionesAsync(VentaConDetallesDto ventaConDetallesDto, int idVenta)
+        {
+            foreach (var detalle in ventaConDetallesDto.Detalles)
+            {
+                var productoTienda = await this.repo.GetProductoTiendaAsync(detalle.IdProducto, ventaConDetallesDto.IdTienda); // Asumiendo que es común a todos los detalles
+
+                if (productoTienda != null && productoTienda.Cantidad < 10) // Umbral de stock bajo
+                {
+                    var notificacionExistente = await this.repo.ExisteNotificacionAsync(detalle.IdProducto, ventaConDetallesDto.IdTienda);
+
+                    if (!notificacionExistente)
+                    {
+                        var notificacion = new Notificacion
+                        {
+                            Mensaje = $"Aviso de stock bajo: En {ventaConDetallesDto.IdTienda} la cantidad de {detalle.IdProducto} es de {productoTienda.Cantidad}.",
+                            Fecha = DateTime.Now,
+                            IdProducto = detalle.IdProducto,
+                            IdTienda = ventaConDetallesDto.IdTienda
+                        };
+
+                        await this.repo.CreateNotificacionAsync(notificacion);
+                    }
+                }
+                // Actualizar el stock
+                if (productoTienda != null)
+                {
+                    productoTienda.Cantidad -= detalle.Cantidad;
+                    await this.repo.UpdateProductoTiendaAsync(productoTienda);
+                }
+
             }
         }
 
@@ -188,39 +269,6 @@ namespace ApiGestionStock.Controllers
             // this logic.
             return NotFound();
         }
-
-
-
-        //[HttpPost("ventas")]
-        //public async Task<ActionResult> ProcesarVenta([FromBody] VentaConDetalles ventaConDetalles)
-        //{
-        //    if (ventaConDetalles == null || !ModelState.IsValid)
-        //    {
-        //        return BadRequest(ModelState); // Devuelve detalles de los errores de validación
-        //    }
-
-        //    using var transaction = await this.context.Database.BeginTransactionAsync();
-        //    try
-        //    {
-        //        // 2. Ejecutar Procedimiento Almacenado (TVP)
-        //        await this.repo.EjecutarProcedimientoAlmacenadoVentaAsync(ventaConDetalles.Venta, ventaConDetalles.Detalles);
-
-        //        // 3. Verificar Stock y Crear Notificaciones
-        //        await this.repo.VerificarStockBajoYCrearNotificacionesAsync(ventaConDetalles.Venta, ventaConDetalles.Detalles);
-
-        //        await transaction.CommitAsync();
-
-        //        return Ok("Venta procesada con éxito.");
-        //    }
-        //    catch (Exception ex)
-        //    {
-        //        await transaction.RollbackAsync();
-        //        //_logger.LogError(ex, "Error al procesar la venta");
-        //        return StatusCode(500, "Error al procesar la venta");
-        //    }
-        //}
-
-        
 
         [HttpPost("compras")]
         public async Task<ActionResult> ProcesarCompra([FromBody] CompraConDetalles compraConDetalles)
@@ -329,5 +377,7 @@ namespace ApiGestionStock.Controllers
             public List<DetallesCompra> Detalles { get; set; }
         }
         #endregion
+
+        
     }
 }

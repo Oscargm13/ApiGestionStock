@@ -58,6 +58,8 @@ namespace ApiGestionStock.Interfaces
         Task<int>CreateVentaAsync(DateTime fecha, int idTienda, int idUsuario, decimal importeTotal, int idCliente);
         Task AgregarDetalleVentaAsync(int idVenta, DetallesVenta detalle);
         Task<Venta> GetVentaByIdAsync(int idVenta);
+        Task<ProductosTienda> GetProductoTiendaAsync(int idProducto, int idTienda);
+        Task UpdateProductoTiendaAsync(ProductosTienda productoTienda);
         #endregion
 
         // Usuario

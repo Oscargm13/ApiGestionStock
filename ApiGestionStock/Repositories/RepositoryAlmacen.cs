@@ -267,6 +267,20 @@ namespace ApiGestionStock.Repositories
         #endregion
 
         #region Inventario
+        //METOOS UTILIZADOS PARA EL PROCESO DE VENTA
+
+        public async Task UpdateProductoTiendaAsync(ProductosTienda productoTienda)
+        {
+            this.context.ProductosTienda.Update(productoTienda);
+            await this.context.SaveChangesAsync();
+        }
+
+        public async Task<ProductosTienda> GetProductoTiendaAsync(int idProducto, int idTienda)
+        {
+            return await this.context.ProductosTienda
+                .FirstOrDefaultAsync(pt => pt.IdProducto == idProducto && pt.IdTienda == idTienda);
+        }
+
         public async Task<int> CreateVentaAsync(DateTime fecha, int idTienda, int idUsuario, decimal importeTotal, int idCliente)
         {
             Venta nuevaVenta = new Venta
@@ -363,70 +377,16 @@ namespace ApiGestionStock.Repositories
             await this.context.SaveChangesAsync();
         }
 
-        //public async Task ProcesarVentaAsync(Venta venta, List<DetallesVenta> detalles)
-        //{
-        //    using var transaction = await this.context.Database.BeginTransactionAsync();
-        //    try
-        //    {
-        //        using var command = this.context.Database.GetDbConnection().CreateCommand();
-        //        command.Transaction = transaction.GetDbTransaction();
-        //        command.CommandText = "ProcesarVentaStock";
-        //        command.CommandType = CommandType.StoredProcedure;
-
-        //        command.Parameters.Add(new SqlParameter("@FechaVenta", venta.FechaVenta));
-        //        command.Parameters.Add(new SqlParameter("@IdTienda", venta.IdTienda));
-        //        command.Parameters.Add(new SqlParameter("@IdUsuario", venta.IdUsuario));
-        //        command.Parameters.Add(new SqlParameter("@ImporteTotal", venta.ImporteTotal));
-        //        command.Parameters.Add(new SqlParameter("@IdCliente", venta.IdCliente));
-
-        //        var detallesXml = new XElement("Detalles",
-        //            detalles.Select(d => new XElement("Detalle",
-        //                new XElement("IdProducto", d.IdProducto),
-        //                new XElement("Cantidad", d.Cantidad),
-        //                new XElement("PrecioUnidad", d.PrecioUnidad)
-        //            ))
-        //        );
-
-        //        command.Parameters.Add(new SqlParameter("@DetallesVenta", detallesXml.ToString()));
-
-        //        await command.ExecuteNonQueryAsync();
-        //        command.Parameters.Clear();
-
-        //        // Verificar stock bajo y crear notificaciones (usando EF Core)
-        //        foreach (var detalle in detalles)
-        //        {
-        //            var producto = await this.context.ProductosTienda
-        //                .FirstOrDefaultAsync(pt => pt.IdProducto == detalle.IdProducto && pt.IdTienda == venta.IdTienda);
-
-        //            if (producto != null && producto.Cantidad < 10) // Umbral de stock bajo
-        //            {
-        //                var notificacionExistente = await this.ExisteNotificacionAsync(detalle.IdProducto, venta.IdTienda);
-        //                if (!notificacionExistente)
-        //                {
-        //                    var notificacion = new Notificacion
-        //                    {
-        //                        Mensaje = $"Aviso de stock bajo: En {venta.IdTienda} la cantidad de {detalle.IdProducto} es de {producto.Cantidad}.",
-        //                        Fecha = DateTime.Now,
-        //                        IdProducto = detalle.IdProducto,
-        //                        IdTienda = venta.IdTienda
-        //                    };
-        //                    await this.CreateNotificacionAsync(notificacion);
-        //                }
-        //            }
-        //        }
-
-        //        await transaction.CommitAsync();
-        //    }
-        //    catch (Exception)
-        //    {
-        //        await transaction.RollbackAsync();
-        //        throw;
-        //    }
-        //}
-
         public async Task EjecutarProcedimientoAlmacenadoVentaAsync(Venta venta, List<DetallesVenta> detalles)
         {
             using var command = this.context.Database.GetDbConnection().CreateCommand();
+
+            // Asignar la transacción activa
+            if (this.context.Database.CurrentTransaction != null)
+            {
+                command.Transaction = this.context.Database.CurrentTransaction.GetDbTransaction();
+            }
+
             command.CommandText = "dbo.InsertarVentaYDetalles"; // Nombre completo (esquema.nombre)
             command.CommandType = CommandType.StoredProcedure;
 
@@ -436,7 +396,6 @@ namespace ApiGestionStock.Repositories
             command.Parameters.Add(new SqlParameter("@ImporteTotal", venta.ImporteTotal));
             command.Parameters.Add(new SqlParameter("@IdCliente", venta.IdCliente));
 
-            // Crear el DataTable para el TVP
             var detallesTable = new DataTable();
             detallesTable.Columns.Add("IdProducto", typeof(int));
             detallesTable.Columns.Add("Cantidad", typeof(int));
@@ -447,15 +406,18 @@ namespace ApiGestionStock.Repositories
                 detallesTable.Rows.Add(detalle.IdProducto, detalle.Cantidad, detalle.PrecioUnidad);
             }
 
-            // Agregar el parámetro del TVP
-            var detallesParameter = new SqlParameter("@DetallesVenta", SqlDbType.Structured);
-            detallesParameter.TypeName = "dbo.DetallesVentaTableType"; // Nombre completo del tipo
-            detallesParameter.Value = detallesTable;
+            var detallesParameter = new SqlParameter("@DetallesVenta", SqlDbType.Structured)
+            {
+                TypeName = "dbo.DetallesVentaTableType",
+                Value = detallesTable
+            };
+
             command.Parameters.Add(detallesParameter);
 
             await command.ExecuteNonQueryAsync();
         }
 
+        //METOOS UTILIZADOS PARA EL PROCESO DE VENTA
         public async Task VerificarStockBajoYCrearNotificacionesAsync(Venta venta, List<DetallesVenta> detalles)
         {
             foreach (var detalle in detalles)
