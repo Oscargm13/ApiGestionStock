@@ -10,7 +10,7 @@ namespace ApiGestionStock.Models
         [Column("IdProducto")]
         public int IdProducto { get; set; }
 
-        [Required(ErrorMessage = "El nombre es obligatorio")] // Agrega el atributo Required
+        [Required(ErrorMessage = "El nombre es obligatorio")]
         [Column("Nombre")]
         public string Nombre { get; set; }
 
@@ -23,20 +23,13 @@ namespace ApiGestionStock.Models
         public decimal Coste { get; set; }
 
         [Required(ErrorMessage = "La categoría es obligatoria")]
-        [Column("IdCategoria")]
+        [ForeignKey("Categoria")]
         public int IdCategoria { get; set; }
 
         [StringLength(100, ErrorMessage = "La ruta de la imagen no puede tener más de 100 caracteres")]
         [Column("Imagen")]
         public string Imagen { get; set; }
 
-        [ForeignKey("IdCategoria")]
-        public Categoria Categoria { get; set; }
 
-        public ICollection<DetallesVenta> DetallesVentas { get; set; }
-        public ICollection<DetallesCompra> DetallesCompras { get; set; }
-        public ICollection<ProductoProveedor> ProductosProveedores { get; set; }
-
-        public ICollection<ProductosTienda> ProductosTiendas { get; set; }
     }
 }

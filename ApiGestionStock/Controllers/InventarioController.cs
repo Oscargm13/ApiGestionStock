@@ -1,4 +1,5 @@
-﻿using System.Data;
+﻿using System.ComponentModel.DataAnnotations;
+using System.Data;
 using System.Xml.Linq;
 using ApiGestionStock.Data;
 using ApiGestionStock.Interfaces;
@@ -270,23 +271,59 @@ namespace ApiGestionStock.Controllers
             return NotFound();
         }
 
-        [HttpPost("compras")]
-        public async Task<ActionResult> ProcesarCompra([FromBody] CompraConDetalles compraConDetalles)
+        [HttpPost("procesarcompra")]
+        public async Task<ActionResult> ProcesarCompra([FromBody] CompraConDetallesDto compraConDetallesDto)
         {
-            if (compraConDetalles == null || compraConDetalles.Compra == null || compraConDetalles.Detalles == null || compraConDetalles.Detalles.Count == 0)
+            // 1. Validación básica del DTO y ModelState
+            if (compraConDetallesDto == null || !ModelState.IsValid)
             {
-                return BadRequest("Datos de compra o detalles inválidos.");
+                logger.LogWarning("Intento de procesar compra con datos inválidos.");
+                return BadRequest(ModelState);
             }
 
+            // 2. Iniciar Transacción
+            using var transaction = await context.Database.BeginTransactionAsync();
             try
             {
-                await this.repo.ProcesarCompraAsync(compraConDetalles.Compra, compraConDetalles.Detalles);
-                return Ok("Compra procesada exitosamente.");
+                // 3. Mapear DTO a objetos necesarios para el repositorio
+                //    (Podrías pasar el DTO directamente si el repo lo acepta,
+                //     o mapear a entidades si el repo espera entidades)
+                //    Aquí mapeamos a una lista simple de detalles para el repo.
+                var detallesCompraList = compraConDetallesDto.Detalles.Select(dto => new DetallesCompra // O un objeto simple si prefieres
+                {
+                    IdProducto = dto.IdProducto,
+                    Cantidad = dto.Cantidad,
+                    PrecioUnidad = dto.PrecioUnidad
+                    // No necesitas IdCompra aquí si el SP lo maneja
+                }).ToList();
+
+                // 4. Ejecutar lógica de negocio/procedimiento almacenado a través del repositorio
+                //    Pasamos los datos necesarios del DTO y la lista de detalles.
+                await repo.EjecutarProcedimientoAlmacenadoCompraAsync(
+                    compraConDetallesDto.FechaCompra,
+                    compraConDetallesDto.IdProveedor,
+                    compraConDetallesDto.IdTienda,
+                    compraConDetallesDto.ImporteTotal,
+                    compraConDetallesDto.IdUsuario,
+                    detallesCompraList // Pasamos la lista mapeada
+                );
+
+                // 5. (Opcional) Lógica adicional si es necesaria (ej: notificaciones)
+                //await repo.GenerarNotificacionesPostCompraAsync(compraConDetallesDto);
+
+                // 6. Confirmar Transacción
+                await transaction.CommitAsync();
+                logger.LogInformation("Compra procesada con éxito para el usuario {UsuarioId} en la tienda {TiendaId}.",
+                    compraConDetallesDto.IdUsuario, compraConDetallesDto.IdTienda);
+                return Ok("Compra procesada con éxito.");
             }
             catch (Exception ex)
             {
-                // Loguear el error
-                return StatusCode(500, "Error al procesar compra: " + ex.Message);
+                // 7. Revertir Transacción en caso de error
+                await transaction.RollbackAsync();
+                logger.LogError(ex, "Error al procesar la compra para el usuario {UsuarioId}.", compraConDetallesDto?.IdUsuario);
+                // Devuelve un error genérico al cliente por seguridad
+                return StatusCode(500, "Ocurrió un error inesperado al procesar la compra.");
             }
         }
 
@@ -369,15 +406,26 @@ namespace ApiGestionStock.Controllers
             }
         }
 
-        #region Clases de Ayuda para Procesar Venta y Compra
-        
-        public class CompraConDetalles
+        #region Clases de Ayuda para Procesar Compra
+
+        public class CompraConDetallesDto
+        {        
+            public DateTime FechaCompra { get; set; }
+            public int IdProveedor { get; set; }
+            public int IdTienda { get; set; }
+            public decimal ImporteTotal { get; set; }
+            public int IdUsuario { get; set; }
+            public List<DetalleCompraDto> Detalles { get; set; }
+        }
+
+        // DTO para los detalles individuales de la compra
+        public class DetalleCompraDto
         {
-            public Compra Compra { get; set; }
-            public List<DetallesCompra> Detalles { get; set; }
+            public int IdProducto { get; set; }
+            public int Cantidad { get; set; }
+            public decimal PrecioUnidad { get; set; }
         }
         #endregion
 
-        
     }
 }

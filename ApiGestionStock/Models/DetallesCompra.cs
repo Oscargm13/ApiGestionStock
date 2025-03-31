@@ -11,11 +11,11 @@ namespace ApiGestionStock.Models
         public int IdDetallesCompra { get; set; }
 
         [Required(ErrorMessage = "La compra es obligatoria")]
-        [Column("IdCompra")]
+        [ForeignKey("Compra")]
         public int IdCompra { get; set; }
 
         [Required(ErrorMessage = "El producto es obligatorio")]
-        [Column("IdProducto")]
+        [ForeignKey("Producto")]
         public int IdProducto { get; set; }
 
         [Required(ErrorMessage = "La cantidad es obligatoria")]
@@ -26,7 +26,5 @@ namespace ApiGestionStock.Models
         [Column("PrecioUnidad")]
         public decimal PrecioUnidad { get; set; }
 
-        public Compra Compra { get; set; }
-        public Producto Producto { get; set; }
     }
 }

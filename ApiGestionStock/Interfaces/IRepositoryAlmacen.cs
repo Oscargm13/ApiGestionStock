@@ -47,7 +47,15 @@ namespace ApiGestionStock.Interfaces
         Task<bool> ExisteNotificacionAsync(int idProducto, int idTienda);
         Task CreateNotificacionAsync(Notificacion notificacion);
         //Task ProcesarVentaAsync(Venta venta, List<DetallesVenta> detalles);
-        Task ProcesarCompraAsync(Compra compra, List<DetallesCompra> detalles);
+        //Task ProcesarCompraAsync(Compra compra, List<DetallesCompra> detalles);
+        Task EjecutarProcedimientoAlmacenadoCompraAsync(
+            DateTime fechaCompra,
+            int idProveedor,
+            int idTienda,
+            decimal importeTotal,
+            int idUsuario,
+            List<DetallesCompra> detalles // O List<DetalleCompraDto> si prefieres
+        );
         Task<decimal> GetIngresosMesAsync(int mes, int year);
         Task<DetallesVenta> GetDetallesVentaAsync(int idDetallesVenta);
         Task DeleteNotificacionAsync(int idNotificacion);

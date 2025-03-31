@@ -387,7 +387,7 @@ namespace ApiGestionStock.Repositories
                 command.Transaction = this.context.Database.CurrentTransaction.GetDbTransaction();
             }
 
-            command.CommandText = "dbo.InsertarVentaYDetalles"; // Nombre completo (esquema.nombre)
+            command.CommandText = "dbo.InsertarVentaYDetalles";
             command.CommandType = CommandType.StoredProcedure;
 
             command.Parameters.Add(new SqlParameter("@FechaVenta", venta.FechaVenta));
@@ -443,33 +443,52 @@ namespace ApiGestionStock.Repositories
             }
         }
 
-        public async Task ProcesarCompraAsync(Compra compra, List<DetallesCompra> detalles)
+        public async Task EjecutarProcedimientoAlmacenadoCompraAsync(
+        DateTime fechaCompra,
+        int idProveedor,
+        int idTienda,
+        decimal importeTotal,
+        int idUsuario,
+        List<DetallesCompra> detalles
+    )
         {
-            using var connection = this.context.Database.GetDbConnection();
-            await connection.OpenAsync();
+            using var command = this.context.Database.GetDbConnection().CreateCommand();
 
-            using var command = connection.CreateCommand();
-            command.CommandText = "ProcesoCompraNotificaciones";
+            if (this.context.Database.CurrentTransaction != null)
+            {
+                command.Transaction = this.context.Database.CurrentTransaction.GetDbTransaction();
+            }
+            else
+            {
+                throw new InvalidOperationException("No se encontró una transacción activa en el contexto.");
+            }
+
+            command.CommandText = "dbo.ProcesoCompraNotificaciones"; // O el nombre correcto de tu SP
             command.CommandType = CommandType.StoredProcedure;
 
-            command.Parameters.Add(new SqlParameter("@FechaCompra", compra.FechaCompra));
-            command.Parameters.Add(new SqlParameter("@IdProveedor", compra.IdProveedor));
-            command.Parameters.Add(new SqlParameter("@IdTienda", compra.IdTienda));
-            command.Parameters.Add(new SqlParameter("@ImporteTotal", compra.ImporteTotal));
-            command.Parameters.Add(new SqlParameter("@IdUsuario", compra.IdUsuario));
+            command.Parameters.Add(new SqlParameter("@FechaCompra", fechaCompra));
+            command.Parameters.Add(new SqlParameter("@IdProveedor", idProveedor));
+            command.Parameters.Add(new SqlParameter("@IdTienda", idTienda));
+            command.Parameters.Add(new SqlParameter("@ImporteTotal", importeTotal));
+            command.Parameters.Add(new SqlParameter("@IdUsuario", idUsuario));
 
-            var detallesXml = new XElement("Detalles",
-                detalles.Select(d => new XElement("Detalle",
-                    new XElement("IdProducto", d.IdProducto),
-                    new XElement("Cantidad", d.Cantidad),
-                    new XElement("PrecioUnidad", d.PrecioUnidad)
-                ))
-            );
+            var detallesTable = new DataTable();
+            detallesTable.Columns.Add("IdProducto", typeof(int));
+            detallesTable.Columns.Add("Cantidad", typeof(int));
+            detallesTable.Columns.Add("PrecioUnidad", typeof(decimal));
 
-            command.Parameters.Add(new SqlParameter("@DetallesCompra", detallesXml.ToString()));
+            foreach (var detalle in detalles)
+            {
+                detallesTable.Rows.Add(detalle.IdProducto, detalle.Cantidad, detalle.PrecioUnidad);
+            }
 
+            var detallesParameter = new SqlParameter("@DetallesCompra", SqlDbType.Structured)
+            {
+                TypeName = "dbo.DetallesCompraTableType",
+                Value = detallesTable
+            };
+            command.Parameters.Add(detallesParameter);
             await command.ExecuteNonQueryAsync();
-            command.Parameters.Clear();
         }
 
         public async Task<decimal> GetIngresosMesAsync(int mes, int year)
