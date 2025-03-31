@@ -21,6 +21,6 @@ namespace ApiGestionStock.Models
         [ForeignKey("IdCategoriaPadre")] // Especifica la clave foránea
         public Categoria CategoriaPadre { get; set; }
 
-        public ICollection<Categoria> CategoriasHijas { get; set; }
+        //public ICollection<Categoria> CategoriasHijas { get; set; }
     }
 }
