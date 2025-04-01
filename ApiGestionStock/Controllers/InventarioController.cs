@@ -72,23 +72,13 @@ namespace ApiGestionStock.Controllers
         }
 
         [HttpPost("notificaciones")]
-        public async Task<ActionResult<Notificacion>> CreateNotificacion([FromBody] Notificacion notificacion)
+        public async Task CreateNotificacionFromForm(
+            [FromForm][Required] string mensaje,
+            [FromForm] DateTime fecha,
+            [FromForm][Required] int idProducto,
+            [FromForm][Required] int idTienda)
         {
-            try
-            {
-                if (notificacion == null)
-                {
-                    return BadRequest("Datos de notificación inválidos.");
-                }
-
-                await this.repo.CreateNotificacionAsync(notificacion);
-                return CreatedAtAction(nameof(GetNotificaciones), new { }, notificacion);
-            }
-            catch (Exception ex)
-            {
-                // Loguear el error
-                return StatusCode(500, "Error al crear notificación: " + ex.Message);
-            }
+            await this.repo.CreateNotificacionAsync(mensaje, fecha, idProducto, idTienda);
         }
 
         #region Clases de Ayuda para Procesar Venta
@@ -193,15 +183,20 @@ namespace ApiGestionStock.Controllers
 
                     if (!notificacionExistente)
                     {
-                        var notificacion = new Notificacion
-                        {
-                            Mensaje = $"Aviso de stock bajo: En {ventaConDetallesDto.IdTienda} la cantidad de {detalle.IdProducto} es de {productoTienda.Cantidad}.",
-                            Fecha = DateTime.Now,
-                            IdProducto = detalle.IdProducto,
-                            IdTienda = ventaConDetallesDto.IdTienda
-                        };
+                        //var notificacion = new Notificacion
+                        //{
+                        //    Mensaje = $"Aviso de stock bajo: En {ventaConDetallesDto.IdTienda} la cantidad de {detalle.IdProducto} es de {productoTienda.Cantidad}.",
+                        //    Fecha = DateTime.Now,
+                        //    IdProducto = detalle.IdProducto,
+                        //    IdTienda = ventaConDetallesDto.IdTienda
+                        //};
 
-                        await this.repo.CreateNotificacionAsync(notificacion);
+                        string mensaje = $"Aviso de stock bajo: En {ventaConDetallesDto.IdTienda} la cantidad de {detalle.IdProducto} es de {productoTienda.Cantidad}.";
+                        DateTime fecha = DateTime.Now;
+                        int idProducto = detalle.IdProducto;
+                        int idTienda = ventaConDetallesDto.IdTienda;
+
+                        await this.repo.CreateNotificacionAsync(mensaje, fecha, idProducto, idTienda);
                     }
                 }
                 // Actualizar el stock

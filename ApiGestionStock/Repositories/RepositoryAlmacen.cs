@@ -371,9 +371,19 @@ namespace ApiGestionStock.Repositories
                 .AnyAsync(n => n.IdProducto == idProducto && n.IdTienda == idTienda);
         }
 
-        public async Task CreateNotificacionAsync(Notificacion notificacion)
+        public async Task CreateNotificacionAsync(string mensaje, DateTime fecha, int idProducto, int idTienda)
         {
-            this.context.Notificaciones.Add(notificacion);
+            // Construir el objeto Notificacion AQUÍ
+            var nuevaNotificacion = new Notificacion
+            {
+                // ID no se asigna, se deja por defecto (0)
+                Mensaje = mensaje,
+                Fecha = fecha, // O podrías decidir generarla aquí: DateTime.UtcNow
+                IdProducto = idProducto,
+                IdTienda = idTienda
+            };
+
+            this.context.Notificaciones.Add(nuevaNotificacion);
             await this.context.SaveChangesAsync();
         }
 
@@ -430,14 +440,18 @@ namespace ApiGestionStock.Repositories
                     var notificacionExistente = await ExisteNotificacionAsync(detalle.IdProducto, venta.IdTienda);
                     if (!notificacionExistente)
                     {
-                        var notificacion = new Notificacion
-                        {
-                            Mensaje = $"Aviso de stock bajo: En {venta.IdTienda} la cantidad de {detalle.IdProducto} es de {producto.Cantidad}.",
-                            Fecha = DateTime.Now,
-                            IdProducto = detalle.IdProducto,
-                            IdTienda = venta.IdTienda
-                        };
-                        await CreateNotificacionAsync(notificacion);
+                        //var notificacion = new Notificacion
+                        //{
+                        //    Mensaje = $"Aviso de stock bajo: En {venta.IdTienda} la cantidad de {detalle.IdProducto} es de {producto.Cantidad}.",
+                        //    Fecha = DateTime.Now,
+                        //    IdProducto = detalle.IdProducto,
+                        //    IdTienda = venta.IdTienda
+                        //};
+                        string mensaje = $"Aviso de stock bajo: En {venta.IdTienda} la cantidad de {detalle.IdProducto} es de {producto.Cantidad}.";
+                        DateTime fecha = DateTime.Now;
+                        int idProducto = detalle.IdProducto;
+                        int idTienda = venta.IdTienda;
+                        await CreateNotificacionAsync(mensaje, fecha, idProducto, idTienda);
                     }
                 }
             }

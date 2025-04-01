@@ -45,7 +45,7 @@ namespace ApiGestionStock.Interfaces
         Task<List<VistaInventarioDetalladoVenta>> GetMovimientosAsync();
         Task<List<Notificacion>> GetNotificacionesAsync();
         Task<bool> ExisteNotificacionAsync(int idProducto, int idTienda);
-        Task CreateNotificacionAsync(Notificacion notificacion);
+        Task CreateNotificacionAsync(string mensaje, DateTime fecha, int idProducto, int idTienda);
         //Task ProcesarVentaAsync(Venta venta, List<DetallesVenta> detalles);
         //Task ProcesarCompraAsync(Compra compra, List<DetallesCompra> detalles);
         Task EjecutarProcedimientoAlmacenadoCompraAsync(
