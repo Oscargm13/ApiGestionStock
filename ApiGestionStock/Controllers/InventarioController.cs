@@ -8,6 +8,7 @@ using ApiGestionStock.Repositories;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using static ApiGestionStock.Repositories.RepositoryAlmacen;
 
 namespace ApiGestionStock.Controllers
 {
@@ -38,6 +39,31 @@ namespace ApiGestionStock.Controllers
             {
                 // Loguear el error
                 return StatusCode(500, "Error al obtener movimientos: " + ex.Message);
+            }
+        }
+
+        [HttpGet("movimientos/paginados")]
+        public async Task<ActionResult<PagedResult<VistaInventarioDetalladoVenta>>> GetMovimientosPaginados(
+            [FromQuery] int pageNumber = 1,
+            [FromQuery] int pageSize = 20)
+        {
+            if (pageNumber <= 0)
+            {
+                return BadRequest("El número de página debe ser mayor que cero.");
+            }
+            if (pageSize <= 0 || pageSize > 100)
+            {
+                return BadRequest("El tamaño de página debe ser mayor que cero y no exceder 100.");
+            }
+
+            try
+            {
+                var resultadoPaginado = await this.repo.GetMovimientosPaginadosConTotalAsync(pageNumber, pageSize);
+                return Ok(resultadoPaginado);
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(StatusCodes.Status500InternalServerError, "Ocurrió un error al procesar la solicitud.");
             }
         }
 

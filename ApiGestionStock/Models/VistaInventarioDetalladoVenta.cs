@@ -81,6 +81,5 @@ namespace ApiGestionStock.Models
         [Column("NombreTienda")]
         public string? NombreTienda { get; set; }
 
-        public Producto Producto { get; set; }
     }
 }

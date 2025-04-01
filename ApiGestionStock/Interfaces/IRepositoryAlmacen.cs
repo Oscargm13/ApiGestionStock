@@ -1,5 +1,6 @@
 ﻿using ApiGestionStock.Data;
 using ApiGestionStock.Models;
+using static ApiGestionStock.Repositories.RepositoryAlmacen;
 
 namespace ApiGestionStock.Interfaces
 {
@@ -79,6 +80,7 @@ namespace ApiGestionStock.Interfaces
         Task<Usuario> FindUsuarioAsync(int idUsuario);
         Task DeleteUsuarioAsync(int idUsuario);
         Task<Usuario> LoginUsuarioAsync(string email, string pass);
+        Task<PagedResult<VistaInventarioDetalladoVenta>> GetMovimientosPaginadosConTotalAsync(int pageNumber, int pageSize = 20);
         #endregion
 
         // Tiendas

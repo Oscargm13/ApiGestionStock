@@ -39,10 +39,10 @@ namespace ApiGestionStock.Controllers
                 //QUE ESTARAN COMPUESTAS POR EL SECRET KEY CIFRADO Y CON EL TOKEN
                 SigningCredentials credentials =
                     new SigningCredentials(this.helper.GetKeyToken(), SecurityAlgorithms.HmacSha256);
-                string jsonEmpleado = JsonConvert.SerializeObject(usuario);
+                string jsonUsuario = JsonConvert.SerializeObject(usuario);
                 Claim[] informacion = new[]
                 {
-                    new Claim("UserData", jsonEmpleado),
+                    new Claim("UserData", jsonUsuario),
                     //new Claim(ClaimTypes.Role, "PRESIDENTE")
                 };
                 //EL TOKEN SE GENEREA CON UNA CLASE Y DEBEMOS INDICAR LOS DATOS QUE ALMMACENARA EN SU INTERIOR

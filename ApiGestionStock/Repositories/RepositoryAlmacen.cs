@@ -355,9 +355,56 @@ namespace ApiGestionStock.Repositories
         public async Task<List<VistaInventarioDetalladoVenta>> GetMovimientosAsync()
         {
             return await this.context.vistaInventarioDetalladoVenta
-                .Include(i => i.Producto)
                 .AsNoTracking()
                 .ToListAsync();
+        }
+
+        public async Task<PagedResult<VistaInventarioDetalladoVenta>> GetMovimientosPaginadosConTotalAsync(int pageNumber, int pageSize = 20)
+        {
+            if (pageNumber <= 0) pageNumber = 1;
+            if (pageSize <= 0) pageSize = 20;
+
+            // Crear parámetros para el SP
+            var pageNumberParam = new SqlParameter("@PageNumber", pageNumber);
+            var pageSizeParam = new SqlParameter("@PageSize", pageSize);
+
+            // Crear el parámetro OUTPUT
+            var totalCountParam = new SqlParameter
+            {
+                ParameterName = "@TotalCount",
+                SqlDbType = SqlDbType.Int,
+                Direction = ParameterDirection.Output
+            };
+
+            var sql = "EXEC dbo.sp_GetInventarioDetalladoPaginadoConTotal @PageNumber, @PageSize, @TotalCount OUTPUT";
+
+            var items = await this.context.Set<VistaInventarioDetalladoVenta>()
+                .FromSqlRaw(sql, pageNumberParam, pageSizeParam, totalCountParam)
+                .ToListAsync();
+
+            // Obtener el valor del parámetro OUTPUT DESPUÉS de ejecutar la consulta
+            int totalCount = (totalCountParam.Value != DBNull.Value && totalCountParam.Value != null)
+                             ? (int)totalCountParam.Value
+                             : 0;
+
+            return new PagedResult<VistaInventarioDetalladoVenta>(items, totalCount, pageNumber, pageSize);
+        }
+
+        public class PagedResult<T>
+        {
+            public List<T> Items { get; set; }
+            public int TotalCount { get; set; }
+            public int PageNumber { get; set; }
+            public int PageSize { get; set; }
+            public int TotalPages => (TotalCount + PageSize - 1) / PageSize;
+
+            public PagedResult(List<T> items, int totalCount, int pageNumber, int pageSize)
+            {
+                Items = items;
+                TotalCount = totalCount;
+                PageNumber = pageNumber;
+                PageSize = pageSize;
+            }
         }
 
         public async Task<List<Notificacion>> GetNotificacionesAsync()
