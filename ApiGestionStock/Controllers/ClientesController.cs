@@ -1,5 +1,6 @@
 ﻿using ApiGestionStock.Interfaces;
 using ApiGestionStock.Models;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
 namespace ApiGestionStock.Controllers
@@ -13,13 +14,13 @@ namespace ApiGestionStock.Controllers
         {
             this.repo = repo;
         }
-
+        
         [HttpGet]
         public async Task<ActionResult<List<Cliente>>>GetClientes()
         {
             return await this.repo.GetClientesAsync();
         }
-
+        [Authorize]
         [HttpGet("{id}")]
         public async Task<ActionResult<Cliente>> FindCliente(int id)
         {

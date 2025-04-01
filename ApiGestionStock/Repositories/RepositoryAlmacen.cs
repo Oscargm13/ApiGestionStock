@@ -440,13 +440,6 @@ namespace ApiGestionStock.Repositories
                     var notificacionExistente = await ExisteNotificacionAsync(detalle.IdProducto, venta.IdTienda);
                     if (!notificacionExistente)
                     {
-                        //var notificacion = new Notificacion
-                        //{
-                        //    Mensaje = $"Aviso de stock bajo: En {venta.IdTienda} la cantidad de {detalle.IdProducto} es de {producto.Cantidad}.",
-                        //    Fecha = DateTime.Now,
-                        //    IdProducto = detalle.IdProducto,
-                        //    IdTienda = venta.IdTienda
-                        //};
                         string mensaje = $"Aviso de stock bajo: En {venta.IdTienda} la cantidad de {detalle.IdProducto} es de {producto.Cantidad}.";
                         DateTime fecha = DateTime.Now;
                         int idProducto = detalle.IdProducto;
@@ -600,6 +593,11 @@ namespace ApiGestionStock.Repositories
                 this.context.Usuarios.Remove(usuario);
                 await this.context.SaveChangesAsync();
             }
+        }
+
+        public async Task<Usuario> LoginUsuarioAsync(string email, string pass)
+        {
+            return await this.context.Usuarios.Where(x => x.Email == email && x.Password == pass).FirstOrDefaultAsync();
         }
         #endregion
 

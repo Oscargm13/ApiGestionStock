@@ -78,6 +78,7 @@ namespace ApiGestionStock.Interfaces
         Task<Usuario> CompararUsuarioAsync(string nombreUsuario, string password);
         Task<Usuario> FindUsuarioAsync(int idUsuario);
         Task DeleteUsuarioAsync(int idUsuario);
+        Task<Usuario> LoginUsuarioAsync(string email, string pass);
         #endregion
 
         // Tiendas

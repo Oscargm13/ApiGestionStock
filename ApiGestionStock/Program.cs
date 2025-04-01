@@ -1,10 +1,13 @@
 using ApiGestionStock.Data;
+using ApiGestionStock.Helpers;
 using ApiGestionStock.Interfaces;
 using ApiGestionStock.Repositories;
 using Microsoft.EntityFrameworkCore;
 
 var builder = WebApplication.CreateBuilder(args);
-
+HelperActionServicesOAuth helper = new HelperActionServicesOAuth(builder.Configuration);
+builder.Services.AddSingleton<HelperActionServicesOAuth>(helper);
+builder.Services.AddAuthentication(helper.GetAuthenticateSchema()).AddJwtBearer(helper.GetJwtBearerOptions());
 // Add services to the container.
 string connectionString = builder.Configuration.GetConnectionString("SqlAzure");
 builder.Services.AddTransient<IRepositoryAlmacen, RepositoryAlmacen>();
@@ -29,6 +32,7 @@ app.UseSwaggerUI(options =>
     options.RoutePrefix = "";
 });
 
+app.UseAuthentication();
 app.UseAuthorization();
 
 app.MapControllers();

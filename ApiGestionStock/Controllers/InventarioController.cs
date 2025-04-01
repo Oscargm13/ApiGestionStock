@@ -183,13 +183,6 @@ namespace ApiGestionStock.Controllers
 
                     if (!notificacionExistente)
                     {
-                        //var notificacion = new Notificacion
-                        //{
-                        //    Mensaje = $"Aviso de stock bajo: En {ventaConDetallesDto.IdTienda} la cantidad de {detalle.IdProducto} es de {productoTienda.Cantidad}.",
-                        //    Fecha = DateTime.Now,
-                        //    IdProducto = detalle.IdProducto,
-                        //    IdTienda = ventaConDetallesDto.IdTienda
-                        //};
 
                         string mensaje = $"Aviso de stock bajo: En {ventaConDetallesDto.IdTienda} la cantidad de {detalle.IdProducto} es de {productoTienda.Cantidad}.";
                         DateTime fecha = DateTime.Now;

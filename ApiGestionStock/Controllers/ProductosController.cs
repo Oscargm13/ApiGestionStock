@@ -1,6 +1,7 @@
 ﻿using ApiGestionStock.Data;
 using ApiGestionStock.Interfaces;
 using ApiGestionStock.Models;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
 namespace ApiGestionStock.Controllers
@@ -17,7 +18,7 @@ namespace ApiGestionStock.Controllers
         }
 
         // Productos
-
+        
         [HttpGet]
         public async Task<ActionResult<List<Producto>>> GetProductos()
         {
