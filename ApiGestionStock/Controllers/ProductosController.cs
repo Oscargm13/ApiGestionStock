@@ -90,15 +90,16 @@ namespace ApiGestionStock.Controllers
         }
 
         [HttpPost]
-        [HttpPost]
-        public async Task<ActionResult> CreateProducto([FromBody] Producto producto, [FromQuery] Categoria categoria)
+        public async Task<ActionResult> CreateProducto([FromBody] Producto producto, [FromQuery] string? nombreCategoria,
+    [FromQuery] int? idCategoriaPadre)
         {
             await repo.CrearProductoAsync(
+                producto.IdCategoria,
                 producto.Nombre,
                 producto.Precio,
                 producto.Coste,
-                categoria.Nombre,
-                categoria.IdCategoriaPadre,
+                nombreCategoria,
+                idCategoriaPadre,
                 producto.Imagen
             );
             return Ok();

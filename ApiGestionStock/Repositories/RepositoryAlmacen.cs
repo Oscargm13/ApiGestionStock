@@ -101,24 +101,40 @@ namespace ApiGestionStock.Repositories
                 .FirstOrDefaultAsync(vpt => vpt.IdProducto == idProducto && vpt.IdTienda == idTienda);
         }
 
-        public async Task CrearProductoAsync(string nombre, decimal precio, decimal coste, string nombreCategoria, int? idCategoriaPadre, string imagen)
+        public async Task CrearProductoAsync(int idCategoria, string nombre, decimal precio, decimal coste, string? nombreCategoria, int? idCategoriaPadre, string imagen)
         {
-            // 1. Crear o encontrar la categoría
-            Categoria categoria = await this.context.Categorias.FirstOrDefaultAsync(c => c.Nombre == nombreCategoria);
+            Categoria categoria = null;
+
+            if (idCategoriaPadre != null && !string.IsNullOrWhiteSpace(nombreCategoria))
+            {
+                // Buscar por nombre + padre
+                categoria = await this.context.Categorias
+                    .FirstOrDefaultAsync(c => c.Nombre == nombreCategoria && c.IdCategoriaPadre == idCategoriaPadre);
+
+                // Si no existe, crearla
+                if (categoria == null)
+                {
+                    categoria = new Categoria
+                    {
+                        Nombre = nombreCategoria,
+                        IdCategoriaPadre = idCategoriaPadre
+                    };
+
+                    this.context.Categorias.Add(categoria);
+                    await this.context.SaveChangesAsync();
+                }
+            }
+            else
+            {
+                // Usar categoría existente por ID
+                categoria = await this.context.Categorias.FirstOrDefaultAsync(c => c.IdCategoria == idCategoria);
+            }
 
             if (categoria == null)
             {
-                categoria = new Categoria
-                {
-                    Nombre = nombreCategoria,
-                    IdCategoriaPadre = idCategoriaPadre
-                };
-
-                this.context.Categorias.Add(categoria);
-                await this.context.SaveChangesAsync(); // Se asegura que el IdCategoria se genera
+                throw new Exception("No se pudo determinar la categoría del producto.");
             }
 
-            // 2. Crear el producto
             Producto nuevoProducto = new Producto
             {
                 Nombre = nombre,
