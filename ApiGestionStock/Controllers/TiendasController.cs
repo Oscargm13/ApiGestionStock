@@ -34,16 +34,27 @@ namespace ApiGestionStock.Controllers
         }
 
         [HttpPost]
-        public async Task<ActionResult> CreateTienda(string nombre, string direccion, string telefono, string email)
+        public async Task<ActionResult> CreateTienda([FromBody] Tienda tienda)
         {
-            await this.repo.CreateTiendaAsync(nombre, direccion, telefono, email);
-            return CreatedAtAction(nameof(GetTienda), new { id = 0 }, null); // Devolver CreatedAtAction correctamente
+            await this.repo.CreateTiendaAsync(
+                tienda.Nombre,
+                tienda.Direccion,
+                tienda.Telefono,
+                tienda.Email);
+
+            return CreatedAtAction(nameof(GetTienda), new { id = 0 }, null);
         }
 
-        [HttpPut("{id}")]
-        public async Task<IActionResult> UpdateTienda(int id, string nombre, string direccion, string telefono, string email)
+        [HttpPut]
+        public async Task<IActionResult> UpdateTienda([FromBody] Tienda tienda)
         {
-            await this.repo.UpdateTiendaAsync(id, nombre, direccion, telefono, email);
+            await this.repo.UpdateTiendaAsync(
+                tienda.IdTienda,
+                tienda.Nombre,
+                tienda.Direccion,
+                tienda.Telefono,
+                tienda.Email);
+
             return NoContent();
         }
 

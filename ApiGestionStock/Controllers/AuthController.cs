@@ -2,10 +2,7 @@
 using System.Security.Claims;
 using ApiGestionStock.Helpers;
 using ApiGestionStock.Interfaces;
-using ApiGestionStock.Models;
-using ApiGestionStock.Repositories;
-using Microsoft.AspNetCore.Authorization;
-using Microsoft.AspNetCore.Http;
+using ApiGestionStock.Models;  
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.IdentityModel.Tokens;
 using Newtonsoft.Json;
@@ -35,8 +32,6 @@ namespace ApiGestionStock.Controllers
             }
             else
             {
-                //DEBEMOS CREAR UNAS CREDENCIALES PARA EL USUARIO PARA INCLUIRLAS DENTRO DEL TOKKEN
-                //QUE ESTARAN COMPUESTAS POR EL SECRET KEY CIFRADO Y CON EL TOKEN
                 SigningCredentials credentials =
                     new SigningCredentials(this.helper.GetKeyToken(), SecurityAlgorithms.HmacSha256);
                 string jsonUsuario = JsonConvert.SerializeObject(usuario);
@@ -45,7 +40,6 @@ namespace ApiGestionStock.Controllers
                     new Claim("UserData", jsonUsuario),
                     //new Claim(ClaimTypes.Role, "PRESIDENTE")
                 };
-                //EL TOKEN SE GENEREA CON UNA CLASE Y DEBEMOS INDICAR LOS DATOS QUE ALMMACENARA EN SU INTERIOR
                 JwtSecurityToken token = new JwtSecurityToken(
                     claims: informacion,
                     issuer: this.helper.Issuer,

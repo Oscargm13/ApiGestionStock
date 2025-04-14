@@ -20,6 +20,7 @@ namespace ApiGestionStock.Controllers
         {
             return await this.repo.GetClientesAsync();
         }
+
         [Authorize]
         [HttpGet("{id}")]
         public async Task<ActionResult<Cliente>> FindCliente(int id)

@@ -90,24 +90,39 @@ namespace ApiGestionStock.Controllers
         }
 
         [HttpPost]
-        public async Task<ActionResult> CreateProducto(string nombre, decimal precio, decimal coste, string nombreCategoria, int? idCategoriaPadre, string imagen)
+        [HttpPost]
+        public async Task<ActionResult> CreateProducto([FromBody] Producto producto, [FromQuery] Categoria categoria)
         {
-            await repo.CrearProductoAsync(nombre, precio, coste, nombreCategoria, idCategoriaPadre, imagen);
+            await repo.CrearProductoAsync(
+                producto.Nombre,
+                producto.Precio,
+                producto.Coste,
+                categoria.Nombre,
+                categoria.IdCategoriaPadre,
+                producto.Imagen
+            );
             return Ok();
         }
 
+
         [HttpPut("{idProducto}")]
-        public async Task<ActionResult> UpdateProducto(int idProducto, string nombreProducto, decimal precio, decimal coste, int idCategoria, string imagen)
+        public async Task<ActionResult> UpdateProducto(int idProducto, [FromBody] Producto producto)
         {
             try
             {
-                await repo.UpdateProductoAsync(idProducto, nombreProducto, precio, coste, idCategoria, imagen);
+                await repo.UpdateProductoAsync(
+                    idProducto,
+                    producto.Nombre,
+                    producto.Precio,
+                    producto.Coste,
+                    producto.IdCategoria,
+                    producto.Imagen
+                );
                 return Ok();
             }
             catch (Exception ex)
             {
-                // Log the exception
-                return StatusCode(500, ex.Message); // Internal Server Error with the error message.
+                return StatusCode(500, ex.Message);
             }
         }
 

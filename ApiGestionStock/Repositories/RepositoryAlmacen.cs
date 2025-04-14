@@ -309,7 +309,8 @@ namespace ApiGestionStock.Repositories
             {
                 using var command = this.context.Database.GetDbConnection().CreateCommand();
 
-                // *** ESTO ES LO CRUCIAL ***
+                // *** ESTO ES LO CRUCIAL **
+                // TRANSACCION PARA QUE SI HAY ALGUN ERROR ANULE TODO LO HECHO EN EL PROCESO
                 command.Transaction = context.Database.CurrentTransaction.GetDbTransaction();
 
                 command.CommandText = "AgregarDetalleVenta";
@@ -322,7 +323,6 @@ namespace ApiGestionStock.Repositories
 
                 await command.ExecuteNonQueryAsync();
 
-                // 1. Actualizar el inventario
                 var inventario = new Inventario
                 {
                     IdProducto = detalle.IdProducto,
@@ -335,9 +335,8 @@ namespace ApiGestionStock.Repositories
                 this.context.Inventarios.Add(inventario);
                 await this.context.SaveChangesAsync();
 
-                // 2. Actualizar el stock en ProductosTienda (puedes optar por manejar esto en el SP si lo prefieres)
                 var productoTienda = await this.context.ProductosTienda
-                    .FirstOrDefaultAsync(pt => pt.IdProducto == detalle.IdProducto && pt.IdTienda == 1); //Asumimos que esto debe ser parametrizado para la tienda
+                    .FirstOrDefaultAsync(pt => pt.IdProducto == detalle.IdProducto && pt.IdTienda == 1);
                 if (productoTienda != null)
                 {
                     productoTienda.Cantidad -= detalle.Cantidad;
@@ -348,7 +347,7 @@ namespace ApiGestionStock.Repositories
             catch (Exception ex)
             {
                 this.logger.LogError(ex, "Error al agregar detalle de venta");
-                throw; // Re-lanza la excepción para que el controlador la maneje
+                throw;
             }
         }
 
