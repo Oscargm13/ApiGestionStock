@@ -607,6 +607,21 @@ namespace ApiGestionStock.Repositories
         {
             return await this.context.Compras.ToListAsync();
         }
+
+        public async Task<bool> ActualizarStockAsync(int idProducto, int idTienda, int cantidad)
+        {
+            var producto = await context.ProductosTienda
+                .FirstOrDefaultAsync(p => p.IdProducto == idProducto && p.IdTienda == idTienda);
+
+            if (producto is null)
+                return false;
+
+            producto.Cantidad += cantidad;
+
+            await context.SaveChangesAsync();
+            return true;
+        }
+
         #endregion
 
         #region Usuario

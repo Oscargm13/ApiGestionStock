@@ -69,6 +69,7 @@ namespace ApiGestionStock.Interfaces
         Task<Venta> GetVentaByIdAsync(int idVenta);
         Task<ProductosTienda> GetProductoTiendaAsync(int idProducto, int idTienda);
         Task UpdateProductoTiendaAsync(ProductosTienda productoTienda);
+        Task<bool> ActualizarStockAsync(int idProducto, int idTienda, int cantidad);
         #endregion
 
         // Usuario

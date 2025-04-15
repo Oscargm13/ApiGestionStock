@@ -151,5 +151,34 @@ namespace ApiGestionStock.Controllers
             return producto;
         }
 
+        [HttpPost("actualizar-stock")]
+        public async Task<IActionResult> ActualizarStock([FromBody] ActualizarStockModel dto)
+        {
+            if (dto == null)
+            {
+                return BadRequest("El modelo es nulo. Revisa el cuerpo JSON.");
+            }
+
+            if (!ModelState.IsValid)
+            {
+                return BadRequest(ModelState);
+            }
+
+            var actualizado = await this.repo.ActualizarStockAsync(dto.IdProducto, dto.IdTienda, dto.Cantidad);
+            if (!actualizado)
+            {
+                return NotFound("Producto no encontrado en la tienda especificada.");
+            }
+
+            return Ok(new { mensaje = "Stock actualizado correctamente." });
+        }
+
+        public class ActualizarStockModel
+        {
+            public int IdProducto { get; set; }
+            public int IdTienda { get; set; }
+            public int Cantidad { get; set; }
+        }
+
     }
 }
