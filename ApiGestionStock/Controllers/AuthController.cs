@@ -25,34 +25,43 @@ namespace ApiGestionStock.Controllers
         [Route("[action]")]
         public async Task<ActionResult> Login(LoginModel model)
         {
+            // Validamos credenciales
             Usuario usuario = await this.repo.LoginUsuarioAsync(model.UserName, model.Password);
             if (usuario == null)
             {
                 return Unauthorized();
             }
-            else
+
+            // Configuramos credenciales para firmar el token
+            var credentials = new SigningCredentials(this.helper.GetKeyToken(), SecurityAlgorithms.HmacSha256);
+
+            // Creamos los claims individuales (más limpios y seguros)
+            var claims = new[]
             {
-                SigningCredentials credentials =
-                    new SigningCredentials(this.helper.GetKeyToken(), SecurityAlgorithms.HmacSha256);
-                string jsonUsuario = JsonConvert.SerializeObject(usuario);
-                Claim[] informacion = new[]
-                {
-                    new Claim("UserData", jsonUsuario),
-                    //new Claim(ClaimTypes.Role, "PRESIDENTE")
-                };
-                JwtSecurityToken token = new JwtSecurityToken(
-                    claims: informacion,
-                    issuer: this.helper.Issuer,
-                    audience: this.helper.Audience,
-                    signingCredentials: credentials,
-                    expires: DateTime.UtcNow.AddMinutes(30),
-                    notBefore: DateTime.UtcNow
-                    );
-                return Ok(new
-                {
-                    response = new JwtSecurityTokenHandler().WriteToken(token)
-                });
-            }
+                new Claim("IdUsuario", usuario.IdUsuario.ToString()),
+                new Claim(ClaimTypes.Name, usuario.Email),
+                new Claim("Nombre", usuario.Nombre),
+                //new Claim("Rol", usuario.Rol ?? "") // Evitamos null
+            };
+
+            // Creamos el token JWT
+            var token = new JwtSecurityToken(
+                issuer: this.helper.Issuer,
+                audience: this.helper.Audience,
+                claims: claims,
+                notBefore: DateTime.UtcNow,
+                expires: DateTime.UtcNow.AddMinutes(30),
+                signingCredentials: credentials
+            );
+
+            // Devolvemos el token como string
+            string tokenString = new JwtSecurityTokenHandler().WriteToken(token);
+
+            return Ok(new
+            {
+                response = tokenString
+            });
         }
+
     }
 }
