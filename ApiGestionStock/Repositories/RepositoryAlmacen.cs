@@ -646,6 +646,11 @@ namespace ApiGestionStock.Repositories
             return await this.context.Usuarios.FirstOrDefaultAsync(u => u.IdUsuario == idUsuario);
         }
 
+        public async Task<Usuario> FindUsuarioEmailAsync(string email)
+        {
+            return await this.context.Usuarios.FirstOrDefaultAsync(u => u.Email == email);
+        }
+
         public async Task DeleteUsuarioAsync(int idUsuario)
         {
             var usuario = await this.context.Usuarios.FindAsync(idUsuario);

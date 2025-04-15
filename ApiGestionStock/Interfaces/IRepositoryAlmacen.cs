@@ -78,6 +78,7 @@ namespace ApiGestionStock.Interfaces
         Task CreateUsuarioAsync(string nombre, string email, string pass, int idRole, string imagen, string nombreEmpresa);
         Task<Usuario> CompararUsuarioAsync(string nombreUsuario, string password);
         Task<Usuario> FindUsuarioAsync(int idUsuario);
+        Task<Usuario> FindUsuarioEmailAsync(string email);
         Task DeleteUsuarioAsync(int idUsuario);
         Task<Usuario> LoginUsuarioAsync(string email, string pass);
         Task<PagedResult<VistaInventarioDetalladoVenta>> GetMovimientosPaginadosConTotalAsync(int pageNumber, int pageSize = 20);

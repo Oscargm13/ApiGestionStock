@@ -56,6 +56,18 @@ namespace ApiGestionStock.Controllers
             }
             return usuario;
         }
+
+        [HttpGet("email/{email}")]
+        public async Task<ActionResult<Usuario>> GetUsuarioEmail(string email)
+        {
+            var usuario = await this.repo.FindUsuarioEmailAsync(email);
+            if (usuario == null)
+            {
+                return NotFound();
+            }
+            return usuario;
+        }
+
         [HttpDelete("{id}")]
         public async Task<ActionResult> DeleteUsuario(int id)
         {
