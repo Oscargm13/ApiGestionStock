@@ -1,6 +1,7 @@
 ﻿using System.Data;
 using System.Xml.Linq;
 using ApiGestionStock.Data;
+using ApiGestionStock.DTOs;
 using ApiGestionStock.Interfaces;
 using ApiGestionStock.Models;
 using Microsoft.Data.SqlClient;
@@ -64,7 +65,7 @@ namespace ApiGestionStock.Repositories
 
         public async Task<List<ProductosTienda>> GetProductosTiendaGerenteAsync(int idGerente)
         {
-            return await this.context.ProductosTienda
+            return await this.context.ProductosTiendas
                 .Join(this.context.Tiendas, pt => pt.IdTienda, t => t.IdTienda, (pt, t) => new { pt, t })
                 .Join(this.context.ManagerTiendas, pt_t => pt_t.t.IdTienda, mt => mt.IdTienda, (pt_t, mt) => new { pt_t.pt, mt })
                 .Where(x => x.mt.IdUsuario == idGerente)
@@ -100,54 +101,147 @@ namespace ApiGestionStock.Repositories
             return await this.context.VistaProductosTienda
                 .FirstOrDefaultAsync(vpt => vpt.IdProducto == idProducto && vpt.IdTienda == idTienda);
         }
+        //-------------------------------------------------------------------------------------------------------------------------------------------------
+        //-------------------------------------------------------------------------------------------------------------------------------------------------
+        //-------------------------------------------------------------------------------------------------------------------------------------------------
+        //public async Task CrearProductoAsync(int idCategoria, string nombre, decimal precio, decimal coste, string? nombreCategoria, int? idCategoriaPadre, string imagen)
+        //{
+        //    Categoria categoria = null;
 
-        public async Task CrearProductoAsync(int idCategoria, string nombre, decimal precio, decimal coste, string? nombreCategoria, int? idCategoriaPadre, string imagen)
+        //    if (idCategoriaPadre != null && !string.IsNullOrWhiteSpace(nombreCategoria))
+        //    {
+        //        // Buscar por nombre + padre
+        //        categoria = await this.context.Categorias
+        //            .FirstOrDefaultAsync(c => c.Nombre == nombreCategoria && c.IdCategoriaPadre == idCategoriaPadre);
+
+        //        // Si no existe, crearla
+        //        if (categoria == null)
+        //        {
+        //            categoria = new Categoria
+        //            {
+        //                Nombre = nombreCategoria,
+        //                IdCategoriaPadre = idCategoriaPadre
+        //            };
+
+        //            this.context.Categorias.Add(categoria);
+        //            await this.context.SaveChangesAsync();
+        //        }
+        //    }
+        //    else
+        //    {
+        //        // Usar categoría existente por ID
+        //        categoria = await this.context.Categorias.FirstOrDefaultAsync(c => c.IdCategoria == idCategoria);
+        //    }
+
+        //    if (categoria == null)
+        //    {
+        //        throw new Exception("No se pudo determinar la categoría del producto.");
+        //    }
+
+        //    Producto nuevoProducto = new Producto
+        //    {
+        //        Nombre = nombre,
+        //        Precio = precio,
+        //        Coste = coste,
+        //        IdCategoria = categoria.IdCategoria,
+        //        Imagen = imagen
+        //    };
+
+        //    this.context.Productos.Add(nuevoProducto);
+        //    await this.context.SaveChangesAsync();
+        //}
+        public async Task CrearProductoAsync(CrearProductoDto dto)
         {
             Categoria categoria = null;
 
-            if (idCategoriaPadre != null && !string.IsNullOrWhiteSpace(nombreCategoria))
+            if (!string.IsNullOrWhiteSpace(dto.NombreCategoria) && dto.IdCategoriaPadre != null)
             {
-                // Buscar por nombre + padre
                 categoria = await this.context.Categorias
-                    .FirstOrDefaultAsync(c => c.Nombre == nombreCategoria && c.IdCategoriaPadre == idCategoriaPadre);
+                    .FirstOrDefaultAsync(c => c.Nombre == dto.NombreCategoria && c.IdCategoriaPadre == dto.IdCategoriaPadre);
 
-                // Si no existe, crearla
                 if (categoria == null)
                 {
                     categoria = new Categoria
                     {
-                        Nombre = nombreCategoria,
-                        IdCategoriaPadre = idCategoriaPadre
+                        Nombre = dto.NombreCategoria,
+                        IdCategoriaPadre = dto.IdCategoriaPadre
                     };
-
                     this.context.Categorias.Add(categoria);
                     await this.context.SaveChangesAsync();
                 }
             }
-            else
+            else if (dto.IdCategoria.HasValue)
             {
-                // Usar categoría existente por ID
-                categoria = await this.context.Categorias.FirstOrDefaultAsync(c => c.IdCategoria == idCategoria);
+                categoria = await this.context.Categorias.FindAsync(dto.IdCategoria.Value);
             }
 
             if (categoria == null)
-            {
                 throw new Exception("No se pudo determinar la categoría del producto.");
-            }
 
             Producto nuevoProducto = new Producto
             {
-                Nombre = nombre,
-                Precio = precio,
-                Coste = coste,
-                IdCategoria = categoria.IdCategoria,
-                Imagen = imagen
+                Nombre = dto.Nombre,
+                Precio = dto.Precio,
+                Coste = dto.Coste,
+                Imagen = dto.Imagen,
+                IdCategoria = categoria.IdCategoria
             };
 
             this.context.Productos.Add(nuevoProducto);
             await this.context.SaveChangesAsync();
+
+            int idProducto = nuevoProducto.IdProducto;
+
+            if (dto.IdProveedor.HasValue)
+                await this.AsociarProductoAProveedorAsync(idProducto, dto.IdProveedor.Value);
+
+            if (dto.IdsTiendas != null && dto.IdsTiendas.Any())
+                await this.AsociarProductoATiendasAsync(idProducto, dto.IdsTiendas);
         }
 
+
+        private async Task AsociarProductoAProveedorAsync(int idProducto, int idProveedor)
+        {
+            bool yaExiste = await this.context.ProductosProveedores
+                .AnyAsync(pp => pp.IdProducto == idProducto && pp.IdProveedor == idProveedor);
+
+            if (!yaExiste)
+            {
+                var relacion = new ProductoProveedor
+                {
+                    IdProducto = idProducto,
+                    IdProveedor = idProveedor
+                };
+
+                this.context.ProductosProveedores.Add(relacion);
+                await this.context.SaveChangesAsync();
+            }
+        }
+
+        private async Task AsociarProductoATiendasAsync(int idProducto, List<int> idsTiendas)
+        {
+            foreach (int idTienda in idsTiendas.Distinct())
+            {
+                bool yaExiste = await this.context.ProductosTiendas
+                    .AnyAsync(pt => pt.IdProducto == idProducto && pt.IdTienda == idTienda);
+
+                if (!yaExiste)
+                {
+                    var productoTienda = new ProductosTienda
+                    {
+                        IdProducto = idProducto,
+                        IdTienda = idTienda,
+                        Cantidad = 0
+                    };
+
+                    this.context.ProductosTiendas.Add(productoTienda);
+                }
+            }
+
+            await this.context.SaveChangesAsync();
+        }
+
+        //-------------------------------------------------------------------------------------------------------------------------------------------------
         public async Task UpdateProductoAsync(int idProducto, string nombreProducto, decimal precio, decimal coste, int idCategoria, string imagen)
         {
             Producto productoExistente = await this.context.Productos.FindAsync(idProducto);
@@ -287,13 +381,13 @@ namespace ApiGestionStock.Repositories
 
         public async Task UpdateProductoTiendaAsync(ProductosTienda productoTienda)
         {
-            this.context.ProductosTienda.Update(productoTienda);
+            this.context.ProductosTiendas.Update(productoTienda);
             await this.context.SaveChangesAsync();
         }
 
         public async Task<ProductosTienda> GetProductoTiendaAsync(int idProducto, int idTienda)
         {
-            return await this.context.ProductosTienda
+            return await this.context.ProductosTiendas
                 .FirstOrDefaultAsync(pt => pt.IdProducto == idProducto && pt.IdTienda == idTienda);
         }
 
@@ -351,12 +445,12 @@ namespace ApiGestionStock.Repositories
                 this.context.Inventarios.Add(inventario);
                 await this.context.SaveChangesAsync();
 
-                var productoTienda = await this.context.ProductosTienda
+                var productoTienda = await this.context.ProductosTiendas
                     .FirstOrDefaultAsync(pt => pt.IdProducto == detalle.IdProducto && pt.IdTienda == 1);
                 if (productoTienda != null)
                 {
                     productoTienda.Cantidad -= detalle.Cantidad;
-                    this.context.ProductosTienda.Update(productoTienda);
+                    this.context.ProductosTiendas.Update(productoTienda);
                     await this.context.SaveChangesAsync();
                 }
             }
@@ -494,7 +588,7 @@ namespace ApiGestionStock.Repositories
         {
             foreach (var detalle in detalles)
             {
-                var producto = await this.context.ProductosTienda
+                var producto = await this.context.ProductosTiendas
                     .FirstOrDefaultAsync(pt => pt.IdProducto == detalle.IdProducto && pt.IdTienda == venta.IdTienda);
 
                 if (producto != null && producto.Cantidad < 10)
@@ -610,7 +704,7 @@ namespace ApiGestionStock.Repositories
 
         public async Task<bool> ActualizarStockAsync(int idProducto, int idTienda, int cantidad)
         {
-            var producto = await context.ProductosTienda
+            var producto = await context.ProductosTiendas
                 .FirstOrDefaultAsync(p => p.IdProducto == idProducto && p.IdTienda == idTienda);
 
             if (producto is null)

@@ -1,4 +1,5 @@
 ﻿using ApiGestionStock.Data;
+using ApiGestionStock.DTOs;
 using ApiGestionStock.Models;
 using static ApiGestionStock.Repositories.RepositoryAlmacen;
 
@@ -18,7 +19,7 @@ namespace ApiGestionStock.Interfaces
         Task<List<VistaProductosGerente>> GetProductosGerenteAsync(int idUsuarioGerente);
         Task<int> GetTotalStockGerenteAsync(int idUsuarioGerente);
         Task<VistaProductoTienda> FindProductoTiendaAsync(int idProducto, int idTienda);
-        Task CrearProductoAsync(int idCategoria, string nombre, decimal precio, decimal coste, string nombreCategoria, int? idCategoriaPadre, string imagen);
+        Task CrearProductoAsync(CrearProductoDto dto);
         Task UpdateProductoAsync(int idProducto, string nombreProducto, decimal precio, decimal coste, int idCategoria, string imagen);
         Task DeleteProductoAsync(int idProducto);
         Task<List<Categoria>> GetCategoriasAsync();

@@ -1,4 +1,5 @@
 ﻿using ApiGestionStock.Data;
+using ApiGestionStock.DTOs;
 using ApiGestionStock.Interfaces;
 using ApiGestionStock.Models;
 using Microsoft.AspNetCore.Authorization;
@@ -90,21 +91,11 @@ namespace ApiGestionStock.Controllers
         }
 
         [HttpPost]
-        public async Task<ActionResult> CreateProducto([FromBody] Producto producto, [FromQuery] string? nombreCategoria,
-    [FromQuery] int? idCategoriaPadre)
+        public async Task<ActionResult> CreateProducto([FromBody] CrearProductoDto dto)
         {
-            await repo.CrearProductoAsync(
-                producto.IdCategoria,
-                producto.Nombre,
-                producto.Precio,
-                producto.Coste,
-                nombreCategoria,
-                idCategoriaPadre,
-                producto.Imagen
-            );
+            await repo.CrearProductoAsync(dto);
             return Ok();
         }
-
 
         [HttpPut("{idProducto}")]
         public async Task<ActionResult> UpdateProducto(int idProducto, [FromBody] Producto producto)
