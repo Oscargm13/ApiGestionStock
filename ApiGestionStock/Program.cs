@@ -2,6 +2,8 @@ using ApiGestionStock.Data;
 using ApiGestionStock.Helpers;
 using ApiGestionStock.Interfaces;
 using ApiGestionStock.Repositories;
+using Azure.Identity;
+using Azure.Security.KeyVault.Secrets;
 using Microsoft.EntityFrameworkCore;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -9,7 +11,14 @@ HelperActionServicesOAuth helper = new HelperActionServicesOAuth(builder.Configu
 builder.Services.AddSingleton<HelperActionServicesOAuth>(helper);
 builder.Services.AddAuthentication(helper.GetAuthenticateSchema()).AddJwtBearer(helper.GetJwtBearerOptions());
 // Add services to the container.
-string connectionString = builder.Configuration.GetConnectionString("SqlAzure");
+string keyVaultUrl = "https://keyvaultalmacenes.vault.azure.net/";
+var credential = new DefaultAzureCredential();
+var secretClient = new SecretClient(new Uri(keyVaultUrl), credential);
+
+KeyVaultSecret secret = secretClient.GetSecret("conexionalmacenes");
+string connectionString = secret.Value;
+//string connectionString = builder.Configuration.GetConnectionString("SqlAzure");
+builder.Services.AddSingleton(secretClient);
 builder.Services.AddTransient<IRepositoryAlmacen, RepositoryAlmacen>();
 builder.Services.AddDbContext<AlmacenesContext>(options => options.UseSqlServer(connectionString));
 builder.Services.AddControllers();
